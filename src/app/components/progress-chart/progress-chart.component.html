@@ -1,0 +1,15 @@
+<div class="progress-chart-container glass-card" *ngIf="userHistory.length > 0 && username">
+  <h2 class="chart-title">Performance History</h2>
+  
+  <div class="chart-tabs">
+    <button class="chart-tab" [class.active]="selectedMetric === 'level'" (click)="setMetric('level')">Level</button>
+    <button class="chart-tab" [class.active]="selectedMetric === 'distance_walked'" (click)="setMetric('distance_walked')">Distance</button>
+    <button class="chart-tab" [class.active]="selectedMetric === 'caught'" (click)="setMetric('caught')">Caught</button>
+    <button class="chart-tab" [class.active]="selectedMetric === 'stop_visited'" (click)="setMetric('stop_visited')">Pokéstops</button>
+    <button class="chart-tab" [class.active]="selectedMetric === 'total_xp'" (click)="setMetric('total_xp')">Total XP</button>
+  </div>
+
+  <div class="canvas-wrapper">
+    <canvas #progressChart></canvas>
+  </div>
+</div>

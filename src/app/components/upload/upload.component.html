@@ -1,0 +1,54 @@
+<header class="home__header glass-card">
+  <h1>Activity Hub</h1>
+  <p class="home__instructions">
+    Upload a <strong>trainer profile</strong> screenshot from Pokémon GO.
+    Open your profile, scroll to <strong>Total Activity</strong>, and screenshot the stats section. Uploaded screenshots are only processed client-side and aren't stored.
+  </p>
+</header>
+
+<section
+  class="drop-zone glass-card"
+  [class.drop-zone--active]="isDragOver"
+  [class.drop-zone--disabled]="isProcessing"
+  (dragover)="onDragOver($event)"
+  (dragleave)="onDragLeave()"
+  (drop)="onDrop($event)"
+>
+  <input
+    id="screenshot-input"
+    type="file"
+    accept="image/*"
+    class="drop-zone__input"
+    [disabled]="isProcessing"
+    (change)="onFileSelected($event)"
+  />
+  <label for="screenshot-input" class="drop-zone__label">
+    <svg class="upload-icon" viewBox="0 0 24 24" width="32" height="32" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+      <polyline points="17 8 12 3 7 8"></polyline>
+      <line x1="12" y1="3" x2="12" y2="15"></line>
+    </svg>
+    <span class="drop-zone__title">Drop images here or click to browse</span>
+    <span class="drop-zone__hint">Max size: 10MB</span>
+  </label>
+</section>
+
+<figure *ngIf="previewUrl" class="preview fade-out-image" [class.disappear]="state === 'success'">
+  <img [src]="previewUrl" alt="Uploaded profile screenshot preview" />
+</figure>
+
+<div
+  *ngIf="state === 'processing'"
+  class="status status--loading glass-card"
+  role="status"
+>
+  <div class="pokeball-spinner">
+    <div class="pokeball-band"></div>
+  </div>
+  <span class="loading-text">Extracting Trainer Stats...</span>
+</div>
+
+<div *ngIf="state === 'error'" class="status status--error glass-card" role="alert">
+  <p>{{ errorMessage }}</p>
+</div>
+

@@ -1,0 +1,161 @@
+<div class="dashboard-grid">
+  <!-- LEFT COLUMN: Input & Quick Feedback -->
+  <div class="left-col">
+    <app-upload
+      [isProcessing]="isProcessing"
+      [previewUrl]="previewUrl"
+      [state]="state"
+      [errorMessage]="errorMessage"
+      (fileDropped)="processFile($event)">
+    </app-upload>
+
+    <app-diff-summary
+      *ngIf="state === 'success' && stats"
+      [statDiffs]="statDiffs"
+      [dailyAverages]="dailyAverages"
+      [editingFields]="editingFields">
+    </app-diff-summary>
+
+    <section *ngIf="state === 'success' && stats" class="entry-name-section glass-card" style="margin-top: 1.5rem;">
+      <h2>Upload Label</h2>
+      <div class="entry-name-container" style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
+        <ng-container *ngIf="stats.entryName && !editingFields.entryName">
+          <span class="entry-name-display" style="font-size: 1.1rem; font-weight: 500;">{{ stats.entryName }}</span>
+          <button class="edit-btn inline-edit" (click)="toggleEdit('entryName')" aria-label="Edit label">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+          </button>
+        </ng-container>
+        <ng-container *ngIf="!stats.entryName && !editingFields.entryName">
+          <span class="entry-name-placeholder" style="color: rgba(232, 245, 233, 0.6); font-style: italic;">Add a custom label/note (e.g., 'Before GO Fest')</span>
+          <button class="edit-btn inline-edit" (click)="toggleEdit('entryName')" aria-label="Add label">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+          </button>
+        </ng-container>
+        <div *ngIf="editingFields.entryName" class="correction-box inline-correction" style="display: flex; gap: 0.5rem; width: 100%;">
+          <input #entryNameInput type="text" [value]="stats.entryName || ''" placeholder="Enter label" (keyup.enter)="submitCorrection('entryName', entryNameInput.value)" style="flex: 1;" />
+          <button (click)="submitCorrection('entryName', entryNameInput.value)">Save</button>
+          <button type="button" class="cancel-btn" (click)="toggleEdit('entryName')">Cancel</button>
+        </div>
+      </div>
+    </section>
+
+    <div *ngIf="state === 'error'" class="status status--error glass-card" role="alert">
+      <p>{{ errorMessage }}</p>
+    </div>
+  </div>
+
+  <!-- RIGHT COLUMN: Stats Profile & History -->
+  <div class="right-col">
+    <section *ngIf="state === 'success' && stats" class="stats glass-card" aria-live="polite">
+      <div class="profile-header">
+        <div class="profile-avatar">
+          <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+        </div>
+        <div class="profile-info">
+          <h4 style="margin: 0">Player Profile</h4>
+          <span class="profile-name">
+            <ng-container *ngIf="stats.username !== null && !editingFields.username">
+              {{ displayStats?.username }} 
+              <button class="edit-btn inline-edit" (click)="toggleEdit('username')">
+                <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+              </button>
+            </ng-container>
+          </span>
+        </div>
+      </div>
+      
+      <!-- Username/Level inline editors -->
+      <div *ngIf="editingFields.username" class="correction-box inline-correction">
+        <input #unameInput type="text" [value]="stats.username" placeholder="Enter username" (keyup.enter)="submitCorrection('username', unameInput.value)" />
+        <button (click)="submitCorrection('username', unameInput.value)">Save</button>
+        <button type="button" class="cancel-btn" (click)="toggleEdit('username')">Cancel</button>
+      </div>
+
+
+      <dl class="stats__grid dashboard-stats-grid">
+        <app-stat-card
+          label="Level"
+          [value]="stats.level"
+          [displayValue]="displayStats?.level?.toString() || ''"
+          [diff]="statDiffs?.level"
+          [formattedDiff]="formatDiffCount(statDiffs?.level)"
+          [isAnimating]="isAnimating"
+          [(isEditing)]="editingFields.level"
+          placeholder="Level"
+          (correctionSubmitted)="submitCorrection('level', $event)">
+        </app-stat-card>
+
+        <app-stat-card
+          label="Total XP"
+          [value]="stats.totalXp"
+          [displayValue]="displayStats ? formatCount(displayStats.totalXp) : ''"
+          [diff]="statDiffs?.totalXp"
+          [formattedDiff]="formatDiffCount(statDiffs?.totalXp)"
+          [isAnimating]="isAnimating"
+          [(isEditing)]="editingFields.totalXp"
+          placeholder="XP"
+          (correctionSubmitted)="submitCorrection('totalXp', $event)">
+        </app-stat-card>
+
+        <app-stat-card
+          label="Distance"
+          [value]="stats.distanceWalked"
+          [displayValue]="displayStats ? formatDistance(displayStats) : ''"
+          [diff]="statDiffs?.distanceWalked"
+          [formattedDiff]="formatDiffDistance(statDiffs?.distanceWalked)"
+          [isAnimating]="isAnimating"
+          [(isEditing)]="editingFields.distanceWalked"
+          step="0.1"
+          placeholder="Distance"
+          (correctionSubmitted)="submitCorrection('distanceWalked', $event)">
+        </app-stat-card>
+
+        <app-stat-card
+          label="Caught"
+          [value]="stats.pokemonCaught"
+          [displayValue]="displayStats ? formatCount(displayStats.pokemonCaught) : ''"
+          [diff]="statDiffs?.pokemonCaught"
+          [formattedDiff]="formatDiffCount(statDiffs?.pokemonCaught)"
+          [isAnimating]="isAnimating"
+          [(isEditing)]="editingFields.pokemonCaught"
+          placeholder="Caught"
+          (correctionSubmitted)="submitCorrection('pokemonCaught', $event)">
+        </app-stat-card>
+
+        <app-stat-card
+          label="PokéStops"
+          [value]="stats.pokestopsVisited"
+          [displayValue]="displayStats ? formatCount(displayStats.pokestopsVisited) : ''"
+          [diff]="statDiffs?.pokestopsVisited"
+          [formattedDiff]="formatDiffCount(statDiffs?.pokestopsVisited)"
+          [isAnimating]="isAnimating"
+          [(isEditing)]="editingFields.pokestopsVisited"
+          placeholder="Stops"
+          (correctionSubmitted)="submitCorrection('pokestopsVisited', $event)">
+        </app-stat-card>
+      </dl>
+    </section>
+
+    <app-fun-fact
+      *ngIf="state === 'success' && stats && funFact"
+      [funFact]="funFact"
+      (shuffleClicked)="shuffleFunFact()">
+    </app-fun-fact>
+
+    <app-progress-chart
+      *ngIf="userHistory.length > 0 && username"
+      [userHistory]="userHistory"
+      [username]="username">
+    </app-progress-chart>
+  </div>
+</div>
+
+<div class="debug-section" *ngIf="rawOcrText" style="margin-top: 2rem">
+  <button type="button" class="debug-toggle" (click)="toggleDebug()">
+    {{ showDebug ? "Hide" : "Show" }} OCR text
+  </button>
+  <pre *ngIf="showDebug && rawOcrText" class="debug-text">{{ rawOcrText }}</pre>
+</div>

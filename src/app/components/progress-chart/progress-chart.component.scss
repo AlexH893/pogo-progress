@@ -1,0 +1,45 @@
+.progress-chart-container {
+  padding: 1.5rem;
+
+  .chart-title {
+    margin: 0 0 1.5rem 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+
+  .chart-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+
+    .chart-tab {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: rgba(232, 245, 233, 0.7);
+      padding: 0.4rem 1rem;
+      border-radius: 2rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+      }
+
+      &.active {
+        background: rgba(129, 199, 132, 0.15);
+        border-color: rgba(129, 199, 132, 0.3);
+        color: #a5d6a7;
+      }
+    }
+  }
+
+  .canvas-wrapper {
+    position: relative;
+    height: 300px;
+    width: 100%;
+  }
+}

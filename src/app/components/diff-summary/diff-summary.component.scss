@@ -1,0 +1,40 @@
+.diff-section {
+  text-align: center;
+  
+  h2 {
+    margin: 0 0 1.25rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #e8f5e9;
+  }
+
+  .diff-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .diff-item {
+    display: flex;
+  }
+
+  .diff-value {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  .diff-positive {
+    background: rgba(129, 199, 132, 0.15);
+    color: #a5d6a7;
+    border: 1px solid rgba(129, 199, 132, 0.3);
+  }
+
+  .diff-negative {
+    background: rgba(239, 83, 80, 0.15);
+    color: #ef9a9a;
+    border: 1px solid rgba(239, 83, 80, 0.3);
+  }
+}

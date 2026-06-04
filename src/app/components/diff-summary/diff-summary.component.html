@@ -1,0 +1,52 @@
+<section *ngIf="hasAnyDiffs()" class="diff-section glass-card">
+  <h2>Changes since last upload</h2>
+  <div class="diff-grid">
+    <div class="diff-item" *ngIf="statDiffs.level !== 0">
+      <span class="diff-value diff-positive" *ngIf="statDiffs.level > 0">{{ formatDiffCount(statDiffs.level) }} Level</span>
+      <span class="diff-value diff-negative" *ngIf="statDiffs.level < 0">{{ formatDiffCount(statDiffs.level) }} Level</span>
+    </div>
+    <div class="diff-item" *ngIf="statDiffs.distanceWalked !== 0">
+      <span class="diff-value diff-positive" *ngIf="statDiffs.distanceWalked > 0">{{ formatDiffDistance(statDiffs.distanceWalked) }} km walked</span>
+      <span class="diff-value diff-negative" *ngIf="statDiffs.distanceWalked < 0">{{ formatDiffDistance(statDiffs.distanceWalked) }} km walked</span>
+    </div>
+    <div class="diff-item" *ngIf="statDiffs.pokemonCaught !== 0">
+      <span class="diff-value diff-positive" *ngIf="statDiffs.pokemonCaught > 0">{{ formatDiffCount(statDiffs.pokemonCaught) }} Pokémon caught</span>
+      <span class="diff-value diff-negative" *ngIf="statDiffs.pokemonCaught < 0">{{ formatDiffCount(statDiffs.pokemonCaught) }} Pokémon caught</span>
+    </div>
+    <div class="diff-item" *ngIf="statDiffs.pokestopsVisited !== 0">
+      <span class="diff-value diff-positive" *ngIf="statDiffs.pokestopsVisited > 0">{{ formatDiffCount(statDiffs.pokestopsVisited) }} PokéStops visited</span>
+      <span class="diff-value diff-negative" *ngIf="statDiffs.pokestopsVisited < 0">{{ formatDiffCount(statDiffs.pokestopsVisited) }} PokéStops visited</span>
+    </div>
+    <div class="diff-item" *ngIf="statDiffs.totalXp !== 0">
+      <span class="diff-value diff-positive" *ngIf="statDiffs.totalXp > 0">{{ formatDiffCount(statDiffs.totalXp) }} XP</span>
+      <span class="diff-value diff-negative" *ngIf="statDiffs.totalXp < 0">{{ formatDiffCount(statDiffs.totalXp) }} XP</span>
+    </div>
+  </div>
+</section>
+
+<section *ngIf="dailyAverages" class="diff-section glass-card" style="margin-top: 1.5rem;">
+  <h2>Current Pace</h2>
+  <div class="diff-grid">
+    <div class="diff-item" *ngIf="showPace('level')">
+      <span class="diff-value diff-positive" *ngIf="dailyAverages.level > 0">{{ formatPaceCount(dailyAverages.level) }} Level</span>
+      <span class="diff-value diff-negative" *ngIf="dailyAverages.level < 0">{{ formatPaceCount(dailyAverages.level) }} Level</span>
+    </div>
+    <div class="diff-item" *ngIf="showPace('distanceWalked')">
+      <span class="diff-value diff-positive" *ngIf="dailyAverages.distanceWalked > 0">{{ formatPaceDistance(dailyAverages.distanceWalked) }} walked</span>
+      <span class="diff-value diff-negative" *ngIf="dailyAverages.distanceWalked < 0">{{ formatPaceDistance(dailyAverages.distanceWalked) }} walked</span>
+    </div>
+    <div class="diff-item" *ngIf="showPace('pokemonCaught')">
+      <span class="diff-value diff-positive" *ngIf="dailyAverages.pokemonCaught > 0">{{ formatPaceCount(dailyAverages.pokemonCaught) }} Pokémon caught</span>
+      <span class="diff-value diff-negative" *ngIf="dailyAverages.pokemonCaught < 0">{{ formatPaceCount(dailyAverages.pokemonCaught) }} Pokémon caught</span>
+    </div>
+    <div class="diff-item" *ngIf="showPace('pokestopsVisited')">
+      <span class="diff-value diff-positive" *ngIf="dailyAverages.pokestopsVisited > 0">{{ formatPaceCount(dailyAverages.pokestopsVisited) }} PokéStops visited</span>
+      <span class="diff-value diff-negative" *ngIf="dailyAverages.pokestopsVisited < 0">{{ formatPaceCount(dailyAverages.pokestopsVisited) }} PokéStops visited</span>
+    </div>
+    <div class="diff-item" *ngIf="showPace('totalXp')">
+      <span class="diff-value diff-positive" *ngIf="dailyAverages.totalXp > 0">{{ formatPaceCount(dailyAverages.totalXp) }} XP</span>
+      <span class="diff-value diff-negative" *ngIf="dailyAverages.totalXp < 0">{{ formatPaceCount(dailyAverages.totalXp) }} XP</span>
+    </div>
+  </div>
+</section>
+

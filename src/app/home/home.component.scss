@@ -1,0 +1,195 @@
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+
+  @media (min-width: 992px) {
+    grid-template-columns: 400px 1fr;
+  }
+}
+
+.left-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.home__header {
+  text-align: center;
+  padding: 1.5rem;
+ 
+
+  h1 {
+    margin: 0 0 0.5rem;
+    font-size: 1.75rem;
+    font-weight: 700;
+  }
+
+  .home__instructions {
+    margin: 0;
+    color: rgba(232, 245, 233, 0.7);
+    line-height: 1.5;
+    font-size: 0.95rem;
+  }
+}
+
+
+
+
+
+/* Player Profile Stats Grid */
+.stats {
+  padding: 1.5rem;
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+
+  .profile-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: rgba(129, 199, 132, 0.1);
+    color: #81c784;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid rgba(129, 199, 132, 0.3);
+  }
+
+  .profile-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+
+    h2 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    .profile-name {
+      color: #e8f5e9;
+      font-size: 1.5rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+  }
+}
+
+.dashboard-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin: 0;
+}
+
+
+
+.edit-btn {
+  background: rgba(129, 199, 132, 0.1);
+  border: none;
+  color: #81c784;
+  cursor: pointer;
+  padding: 0.35rem;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+
+  &:hover {
+    background: rgba(129, 199, 132, 0.25);
+    color: #a5d6a7;
+  }
+}
+
+
+
+.correction-box {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+
+  input {
+    flex: 1;
+    min-width: 0;
+    padding: 0.35rem 0.5rem;
+    font-size: 0.85rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.2);
+    color: #fff;
+    border-radius: 0.25rem;
+    outline: none;
+
+    &:focus { border-color: #81c784; }
+  }
+
+  button {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.85rem;
+    background: rgba(129, 199, 132, 0.2);
+    color: #a5d6a7;
+    border: 1px solid rgba(129, 199, 132, 0.3);
+    border-radius: 0.25rem;
+    cursor: pointer;
+
+    &:hover { background: rgba(129, 199, 132, 0.3); }
+  }
+
+  .cancel-btn {
+    background: transparent;
+    color: #ef9a9a;
+    border: 1px solid rgba(239, 83, 80, 0.3);
+    
+    &:hover { background: rgba(239, 83, 80, 0.1); }
+  }
+}
+
+.inline-correction {
+  margin-bottom: 1.5rem;
+}
+
+
+
+.debug-section {
+  grid-column: 1 / -1;
+}
+
+.debug-toggle {
+  padding: 0.35rem 0.75rem;
+  border: 1px solid #ef5350;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: #ef5350;
+  cursor: pointer;
+}
+
+.debug-text {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 0.5rem;
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #e8f5e9;
+}
+
+h4 {
+  font-size: 0.9rem;
+}
