@@ -45,11 +45,8 @@
 
 .stat-val {
   font-variant-numeric: tabular-nums;
-  font-size: clamp(1.1rem, 15cqi, 1.75rem);
+  font-size: clamp(0.85rem, 11cqi, 1.75rem);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
 }
 
 .floating-diff {
