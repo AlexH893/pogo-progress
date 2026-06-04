@@ -34,6 +34,11 @@
 .entry-name-section {
   grid-area: entry;
   order: 3;
+
+  @media (max-width: 991px) {
+    grid-area: auto;
+    order: 999;
+  }
 }
 
 .home__header {
