@@ -1,6 +1,6 @@
 .dashboard-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 2rem;
   max-width: 1400px;
   margin: 0 auto;
@@ -8,10 +8,14 @@
 
   @media (min-width: 992px) {
     grid-template-columns: 400px 1fr;
-    grid-template-areas: 
+    grid-template-areas:
       "left right"
       "entry right";
     align-items: start;
+
+    .left-col { grid-area: left; }
+    .right-col { grid-area: right; }
+    .entry-name-section { grid-area: entry; }
   }
 }
 
@@ -19,7 +23,6 @@
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  grid-area: left;
   order: 1;
 }
 
@@ -27,41 +30,12 @@
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  grid-area: right;
   order: 2;
 }
 
 .entry-name-section {
-  grid-area: entry;
   order: 3;
-
-  @media (max-width: 991px) {
-    grid-area: auto;
-    order: 999;
-  }
 }
-
-.home__header {
-  text-align: center;
-  padding: 1.5rem;
- 
-
-  h1 {
-    margin: 0 0 0.5rem;
-    font-size: 1.75rem;
-    font-weight: 700;
-  }
-
-  .home__instructions {
-    margin: 0;
-    color: rgba(232, 245, 233, 0.7);
-    line-height: 1.5;
-    font-size: 0.95rem;
-  }
-}
-
-
-
 
 
 /* Player Profile Stats Grid */
@@ -120,64 +94,6 @@
 
 
 
-.edit-btn {
-  background: rgba(129, 199, 132, 0.1);
-  border: none;
-  color: #81c784;
-  cursor: pointer;
-  padding: 0.35rem;
-  border-radius: 50%;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-
-  &:hover {
-    background: rgba(129, 199, 132, 0.25);
-    color: #a5d6a7;
-  }
-}
-
-
-
-.correction-box {
-  display: flex;
-  gap: 0.5rem;
-  width: 100%;
-
-  input {
-    flex: 1;
-    min-width: 0;
-    padding: 0.35rem 0.5rem;
-    font-size: 0.85rem;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(0, 0, 0, 0.2);
-    color: #fff;
-    border-radius: 0.25rem;
-    outline: none;
-
-    &:focus { border-color: #81c784; }
-  }
-
-  button {
-    padding: 0.35rem 0.75rem;
-    font-size: 0.85rem;
-    background: rgba(129, 199, 132, 0.2);
-    color: #a5d6a7;
-    border: 1px solid rgba(129, 199, 132, 0.3);
-    border-radius: 0.25rem;
-    cursor: pointer;
-
-    &:hover { background: rgba(129, 199, 132, 0.3); }
-  }
-
-  .cancel-btn {
-    background: transparent;
-    color: #ef9a9a;
-    border: 1px solid rgba(239, 83, 80, 0.3);
-    
-    &:hover { background: rgba(239, 83, 80, 0.1); }
-  }
-}
 
 .inline-correction {
   margin-bottom: 1.5rem;
@@ -211,4 +127,57 @@
 
 h4 {
   font-size: 0.9rem;
+}
+
+@media only screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) {
+  /* iPhone 14 / iPhone 15 */
+
+  .dashboard-grid {
+    gap: 1.25rem;
+    padding: 0 1rem;
+  }
+
+  .left-col,
+  .right-col {
+    gap: 1.5rem;
+  }
+
+  /* Centering the glass cards on mobile iPhone 15 viewport vertically */
+  .left-col:has(> app-upload:only-child) {
+    justify-content: center;
+    min-height: calc(100vh - 140px);
+  }
+
+  /* Pin the label section to the very bottom */
+  .entry-name-section {
+    grid-area: auto;
+    order: 999;
+  }
+
+  /* Tighter profile header on small screens */
+  .profile-header {
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 1rem;
+
+    .profile-avatar {
+      width: 44px;
+      height: 44px;
+    }
+
+    .profile-name {
+      font-size: 1.2rem;
+    }
+  }
+
+  /* Stat cards: 2-column grid instead of auto-fit */
+  .dashboard-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+
+  /* Reduce stats section padding */
+  .stats {
+    padding: 1rem;
+  }
 }

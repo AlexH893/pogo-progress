@@ -3,7 +3,7 @@
   <dd>
     <ng-container *ngIf="value !== null && !isEditing">
       <div class="stat-display">
-        <span class="stat-val">{{ displayValue }}</span>
+        <span class="stat-val" [title]="displayValue">{{ displayValue }}</span>
         <span class="floating-diff" *ngIf="isAnimating && diff && diff > 0">{{ formattedDiff }}</span>
         <button class="edit-btn" (click)="toggleEdit()"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg></button>
       </div>

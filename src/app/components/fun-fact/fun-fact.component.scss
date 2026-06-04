@@ -26,19 +26,5 @@
 }
 
 .edit-btn {
-  background: rgba(129, 199, 132, 0.1);
-  border: none;
-  color: #81c784;
-  cursor: pointer;
-  padding: 0.35rem;
-  border-radius: 50%;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
   margin-left: auto;
-
-  &:hover {
-    background: rgba(129, 199, 132, 0.25);
-    color: #a5d6a7;
-  }
 }
