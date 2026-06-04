@@ -24,9 +24,9 @@ export class ProfileOcrService {
 
     const { createWorker, PSM } = await import('tesseract.js');
     const worker = await createWorker('eng', 1, {
-      workerPath: '/assets/tesseract/worker.min.js',
-      langPath: '/assets/tessdata',
-      corePath: '/assets/tesseract',
+      workerPath: 'assets/tesseract/worker.min.js',
+      langPath: 'assets/tessdata',
+      corePath: 'assets/tesseract',
       gzip: true,
     });
     
