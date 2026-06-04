@@ -16,28 +16,7 @@
       [editingFields]="editingFields">
     </app-diff-summary>
 
-    <section *ngIf="state === 'success' && stats" class="entry-name-section glass-card" style="margin-top: 1.5rem;">
-      <h2>Upload Label</h2>
-      <div class="entry-name-container" style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
-        <ng-container *ngIf="stats.entryName && !editingFields.entryName">
-          <span class="entry-name-display" style="font-size: 1.1rem; font-weight: 500;">{{ stats.entryName }}</span>
-          <button class="edit-btn inline-edit" (click)="toggleEdit('entryName')" aria-label="Edit label">
-            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-          </button>
-        </ng-container>
-        <ng-container *ngIf="!stats.entryName && !editingFields.entryName">
-          <span class="entry-name-placeholder" style="color: rgba(232, 245, 233, 0.6); font-style: italic;">Add a custom label/note (e.g., 'Before GO Fest')</span>
-          <button class="edit-btn inline-edit" (click)="toggleEdit('entryName')" aria-label="Add label">
-            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-          </button>
-        </ng-container>
-        <div *ngIf="editingFields.entryName" class="correction-box inline-correction" style="display: flex; gap: 0.5rem; width: 100%;">
-          <input #entryNameInput type="text" [value]="stats.entryName || ''" placeholder="Enter label" (keyup.enter)="submitCorrection('entryName', entryNameInput.value)" style="flex: 1;" />
-          <button (click)="submitCorrection('entryName', entryNameInput.value)">Save</button>
-          <button type="button" class="cancel-btn" (click)="toggleEdit('entryName')">Cancel</button>
-        </div>
-      </div>
-    </section>
+
 
     <div *ngIf="state === 'error'" class="status status--error glass-card" role="alert">
       <p>{{ errorMessage }}</p>
@@ -151,6 +130,30 @@
       [username]="username">
     </app-progress-chart>
   </div>
+
+  <!-- ENTRY NAME SECTION: Placed at the end of the DOM so it drops to bottom on mobile, but positioned under left-col on desktop via CSS Grid -->
+  <section *ngIf="state === 'success' && stats" class="entry-name-section glass-card">
+    <h2>Upload Label</h2>
+    <div class="entry-name-container" style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
+      <ng-container *ngIf="stats.entryName && !editingFields.entryName">
+        <span class="entry-name-display" style="font-size: 1.1rem; font-weight: 500;">{{ stats.entryName }}</span>
+        <button class="edit-btn inline-edit" (click)="toggleEdit('entryName')" aria-label="Edit label">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+        </button>
+      </ng-container>
+      <ng-container *ngIf="!stats.entryName && !editingFields.entryName">
+        <span class="entry-name-placeholder" style="color: rgba(232, 245, 233, 0.6); font-style: italic;">Add a custom label/note (e.g., 'Before GO Fest')</span>
+        <button class="edit-btn inline-edit" (click)="toggleEdit('entryName')" aria-label="Add label">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+        </button>
+      </ng-container>
+      <div *ngIf="editingFields.entryName" class="correction-box inline-correction" style="display: flex; gap: 0.5rem; width: 100%;">
+        <input #entryNameInput type="text" [value]="stats.entryName || ''" placeholder="Enter label" (keyup.enter)="submitCorrection('entryName', entryNameInput.value)" style="flex: 1;" />
+        <button (click)="submitCorrection('entryName', entryNameInput.value)">Save</button>
+        <button type="button" class="cancel-btn" (click)="toggleEdit('entryName')">Cancel</button>
+      </div>
+    </div>
+  </section>
 </div>
 
 <div class="debug-section" *ngIf="rawOcrText" style="margin-top: 2rem">
