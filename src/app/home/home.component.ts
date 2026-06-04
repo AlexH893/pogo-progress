@@ -7,6 +7,7 @@ import {
   ProfileOcrService,
 } from '../services/profile-ocr.service';
 import { FunFactService } from '../services/fun-fact.service';
+import { getApiUrl } from '../config';
 
 type PageState = 'idle' | 'processing' | 'success' | 'error';
 
@@ -134,7 +135,7 @@ export class HomeComponent {
       // Post stats to backend
       if (this.username && this.stats) {
         this.http
-          .post<{success: boolean, statId?: number, previousStats?: any}>('http://localhost:3000/post-data', { 
+          .post<{success: boolean, statId?: number, previousStats?: any}>(`${getApiUrl()}/post-data`, { 
             username: this.username,
             level: this.stats.level,
             distanceWalked: this.stats.distanceWalked,
@@ -222,7 +223,7 @@ export class HomeComponent {
 
     if (this.currentStatId) {
       this.http
-        .put(`http://localhost:3000/update-data/${this.currentStatId}`, payload)
+        .put(`${getApiUrl()}/update-data/${this.currentStatId}`, payload)
         .subscribe({
           next: (res) => {
             console.log(`Updated corrected ${field}:`, res);
@@ -232,7 +233,7 @@ export class HomeComponent {
         });
     } else {
       this.http
-          .post<{success: boolean, statId?: number, previousStats?: any}>('http://localhost:3000/post-data', payload)
+          .post<{success: boolean, statId?: number, previousStats?: any}>(`${getApiUrl()}/post-data`, payload)
         .subscribe({
           next: (res) => {
             console.log(`Posted corrected ${field}:`, res);
@@ -251,7 +252,7 @@ export class HomeComponent {
   }
 
   private fetchUserHistory(username: string): void {
-    this.http.get<any[]>(`http://localhost:3000/get-user-stats/${encodeURIComponent(username)}`).subscribe({
+    this.http.get<any[]>(`${getApiUrl()}/get-user-stats/${encodeURIComponent(username)}`).subscribe({
       next: (data) => {
         this.userHistory = data;
       },

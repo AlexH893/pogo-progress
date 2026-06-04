@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { getApiUrl } from '../config';
 
 @Component({
   selector: 'app-logbook',
@@ -20,7 +21,7 @@ export class LogbookComponent implements OnInit {
 
   fetchData(): void {
     this.isLoading = true;
-    this.http.get<any[]>('http://localhost:3000/get-data').subscribe({
+    this.http.get<any[]>(`${getApiUrl()}/get-data`).subscribe({
       next: (data) => {
         this.stats = data;
         this.isLoading = false;
@@ -54,7 +55,7 @@ export class LogbookComponent implements OnInit {
       entryName: this.editData.entry_name
     };
 
-    this.http.put(`http://localhost:3000/update-data/${this.editingRowId}`, payload).subscribe({
+    this.http.put(`${getApiUrl()}/update-data/${this.editingRowId}`, payload).subscribe({
       next: () => {
         this.fetchData();
         this.editingRowId = null;
@@ -66,7 +67,7 @@ export class LogbookComponent implements OnInit {
 
   deleteEntry(id: number): void {
     if (confirm('Are you sure you want to delete this entry? This cannot be undone.')) {
-      this.http.delete(`http://localhost:3000/delete-data/${id}`).subscribe({
+      this.http.delete(`${getApiUrl()}/delete-data/${id}`).subscribe({
         next: () => {
           this.fetchData();
         },
