@@ -51,3 +51,4 @@ Thumbs.db
 .env.local
 .env.*.local
 *.md
+aiven-ca.pem
