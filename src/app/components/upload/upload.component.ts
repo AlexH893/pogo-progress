@@ -12,14 +12,17 @@ export class UploadComponent {
   @Input() errorMessage: string = '';
   
   @Output() fileDropped = new EventEmitter<File>();
+  @Output() error = new EventEmitter<string>();
 
   isDragOver = false;
+  
+  private readonly validTypes = ['image/jpeg', 'image/png', 'image/webp'];
 
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (file) {
-      this.fileDropped.emit(file);
+      this.handleFile(file);
     }
     input.value = '';
   }
@@ -40,8 +43,16 @@ export class UploadComponent {
       return;
     }
     const file = event.dataTransfer?.files?.[0];
-    if (file?.type.startsWith('image/')) {
-      this.fileDropped.emit(file);
+    if (file) {
+      this.handleFile(file);
     } 
+  }
+  
+  private handleFile(file: File): void {
+    if (this.validTypes.includes(file.type)) {
+      this.fileDropped.emit(file);
+    } else {
+      this.error.emit('Please upload a valid image file (JPG, PNG, WEBP).');
+    }
   }
 }

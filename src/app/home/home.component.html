@@ -6,7 +6,8 @@
       [previewUrl]="previewUrl"
       [state]="state"
       [errorMessage]="errorMessage"
-      (fileDropped)="processFile($event)">
+      (fileDropped)="processFile($event)"
+      (error)="handleUploadError($event)">
     </app-upload>
 
     <app-diff-summary

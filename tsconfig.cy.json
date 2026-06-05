@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "types": ["cypress"]
+  },
+  "include": [
+    "src/**/*.d.ts",
+    "src/**/*.cy.ts",
+    "cypress/**/*.ts"
+  ]
+}

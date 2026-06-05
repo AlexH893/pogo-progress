@@ -4,6 +4,8 @@ import Chart from 'chart.js/auto';
 import { ProfileStats } from '../models/profile-stats';
 import {
   ProfileOcrParseError,
+  InvalidScreenshotError,
+  OcrTimeoutError,
   ProfileOcrService,
 } from '../services/profile-ocr.service';
 import { FunFactService } from '../services/fun-fact.service';
@@ -62,6 +64,11 @@ export class HomeComponent {
 
   get isProcessing(): boolean {
     return this.state === 'processing';
+  }
+
+  handleUploadError(msg: string): void {
+    this.state = 'error';
+    this.errorMessage = msg;
   }
 
 
@@ -162,9 +169,11 @@ export class HomeComponent {
       }
     } catch (err) {
       this.state = 'error';
-      if (err instanceof ProfileOcrParseError) {
+      if (err instanceof ProfileOcrParseError || err instanceof InvalidScreenshotError) {
         this.errorMessage = err.message;
         this.rawOcrText = err.rawText;
+      } else if (err instanceof OcrTimeoutError) {
+        this.errorMessage = err.message;
       } else if (err instanceof Error) {
         this.errorMessage = err.message;
       } else {

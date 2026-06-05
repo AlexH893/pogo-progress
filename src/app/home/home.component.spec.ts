@@ -1,7 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { ProfileOcrService } from '../services/profile-ocr.service';
+import { ProfileOcrService, ProfileOcrParseError, InvalidScreenshotError, OcrTimeoutError } from '../services/profile-ocr.service';
 import { HomeComponent } from './home.component';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
 
 describe('HomeComponent', () => {
   let component: HomeComponent;
@@ -17,6 +18,7 @@ describe('HomeComponent', () => {
           useValue: { extractFromFile: jasmine.createSpy('extractFromFile') },
         },
       ],
+      schemas: [NO_ERRORS_SCHEMA]
     }).compileComponents();
 
     fixture = TestBed.createComponent(HomeComponent);
@@ -102,6 +104,50 @@ describe('HomeComponent', () => {
 
       component.calculateDiffs();
       expect(component.statDiffs).toBeNull();
+    });
+  });
+
+  describe('processFile error handling', () => {
+    let mockOcrService: jasmine.SpyObj<ProfileOcrService>;
+
+    beforeEach(() => {
+      mockOcrService = TestBed.inject(ProfileOcrService) as jasmine.SpyObj<ProfileOcrService>;
+    });
+
+    it('should handle ProfileOcrParseError', async () => {
+      const error = new ProfileOcrParseError('Parse error', 'raw test');
+      mockOcrService.extractFromFile.and.rejectWith(error);
+
+      const file = new File([''], 'test.png', { type: 'image/png' });
+      await component.processFile(file);
+
+      expect(component.state).toBe('error');
+      expect(component.errorMessage).toBe('Parse error');
+      expect(component.rawOcrText).toBe('raw test');
+    });
+
+    it('should handle InvalidScreenshotError', async () => {
+      const error = new InvalidScreenshotError('Invalid screenshot', 'raw test invalid');
+      mockOcrService.extractFromFile.and.rejectWith(error);
+
+      const file = new File([''], 'test.png', { type: 'image/png' });
+      await component.processFile(file);
+
+      expect(component.state).toBe('error');
+      expect(component.errorMessage).toBe('Invalid screenshot');
+      expect(component.rawOcrText).toBe('raw test invalid');
+    });
+
+    it('should handle OcrTimeoutError', async () => {
+      const error = new OcrTimeoutError('Timeout');
+      mockOcrService.extractFromFile.and.rejectWith(error);
+
+      const file = new File([''], 'test.png', { type: 'image/png' });
+      await component.processFile(file);
+
+      expect(component.state).toBe('error');
+      expect(component.errorMessage).toBe('Timeout');
+      expect(component.rawOcrText).toBe(''); // shouldn't set rawOcrText for timeout
     });
   });
 });

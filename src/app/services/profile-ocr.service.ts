@@ -11,6 +11,24 @@ const MAX_IMAGE_WIDTH = 1200;
 })
 export class ProfileOcrService {
   async extractFromFile(file: File): Promise<ProfileOcrResult> {
+    return new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        reject(new OcrTimeoutError('Processing timed out. Your device might be low on memory, or the image is too large. Please try again.'));
+      }, 20000);
+
+      this.doExtractFromFile(file)
+        .then(res => {
+          clearTimeout(timeoutId);
+          resolve(res);
+        })
+        .catch(err => {
+          clearTimeout(timeoutId);
+          reject(err);
+        });
+    });
+  }
+
+  private async doExtractFromFile(file: File): Promise<ProfileOcrResult> {
     const { img, url } = await this.loadImage(file);
     let rawCanvas: HTMLCanvasElement;
     let binarizedCanvas: HTMLCanvasElement;
@@ -38,6 +56,19 @@ export class ProfileOcrService {
       // Pass 1: full binarized image. We do this first to find the dynamic anchor!
       const fullBinarizedResult = await this.recognize(worker, binarizedCanvas, PSM.SINGLE_BLOCK);
       const fullBinarizedText = fullBinarizedResult.text;
+
+      const upperText = fullBinarizedText.toUpperCase();
+      const hasEnglishLabels = /TOTAL ACTIVITY|DISTANCE WALKED|CAUGHT|VISITED|POKEMON|POKESTOP/.test(upperText);
+      const hasBasicProfileIndicators = /LEVEL|XP|\d{1,3},\d{3}/.test(upperText) || upperText.includes('/');
+
+      if (!hasBasicProfileIndicators && !hasEnglishLabels) {
+        throw new InvalidScreenshotError('This does not appear to be a Pokémon GO trainer profile screenshot. Please ensure you are on the profile screen.', fullBinarizedText);
+      }
+      
+      if (hasBasicProfileIndicators && !hasEnglishLabels) {
+        throw new InvalidScreenshotError('It looks like your game might be in another language or the image is too blurry. Currently, only English profile screenshots are supported.', fullBinarizedText);
+      }
+
 
       // Find dynamic anchor
       let activityYRatio = 0.60; // fallback for 16:9 phones
@@ -269,5 +300,22 @@ export class ProfileOcrParseError extends Error {
   ) {
     super(message);
     this.name = 'ProfileOcrParseError';
+  }
+}
+
+export class InvalidScreenshotError extends Error {
+  constructor(
+    message: string,
+    readonly rawText: string
+  ) {
+    super(message);
+    this.name = 'InvalidScreenshotError';
+  }
+}
+
+export class OcrTimeoutError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'OcrTimeoutError';
   }
 }

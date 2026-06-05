@@ -22,6 +22,9 @@
     "lib": [
       "ES2022",
       "dom"
+    ],
+    "types": [
+      "cypress"
     ]
   },
   "angularCompilerOptions": {
@@ -29,5 +32,10 @@
     "strictInjectionParameters": true,
     "strictInputAccessModifiers": true,
     "strictTemplates": true
-  }
+  },
+  "include": [
+    "src/**/*.d.ts",
+    "src/**/*.cy.ts",
+    "cypress/**/*.ts"
+  ]
 }

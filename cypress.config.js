@@ -8,7 +8,16 @@ module.exports = defineConfig({
     devServer: {
       framework: 'angular',
       bundler: 'webpack',
+      options: {
+        projectConfig: {
+          root: '',
+          sourceRoot: 'src',
+          buildOptions: {
+            tsConfig: 'tsconfig.spec.json'
+          }
+        }
+      }
     },
-    specPattern: '**/*.cy.js'
+    specPattern: '**/*.cy.{js,ts}'
   }
 });

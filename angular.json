@@ -61,6 +61,15 @@
               "extractLicenses": false,
               "sourceMap": true,
               "namedChunks": true
+            },
+            "development-ct": {
+              "tsConfig": "tsconfig.cy.json",
+              "buildOptimizer": false,
+              "optimization": false,
+              "vendorChunk": true,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "namedChunks": true
             }
           },
           "defaultConfiguration": "production"
@@ -73,6 +82,9 @@
             },
             "development": {
               "browserTarget": "pogo-progress:build:development"
+            },
+            "development-ct": {
+              "browserTarget": "pogo-progress:build:development-ct"
             }
           },
           "defaultConfiguration": "development"
@@ -128,14 +140,14 @@
         "ct": {
           "builder": "@cypress/schematic:cypress",
           "options": {
-            "devServerTarget": "pogo-progress:serve",
+            "devServerTarget": "pogo-progress:serve:development-ct",
             "watch": true,
             "headless": false,
             "testingType": "component"
           },
           "configurations": {
             "development": {
-              "devServerTarget": "pogo-progress:serve:development"
+              "devServerTarget": "pogo-progress:serve:development-ct"
             }
           }
         },

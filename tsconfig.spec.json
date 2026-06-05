@@ -7,8 +7,19 @@
       "jasmine"
     ]
   },
+  "files": [
+    "cypress/support/component.ts",
+    "src/app/logbook/logbook.component.cy.ts",
+    "src/app/components/stat-card/stat-card.component.cy.ts",
+    "src/app/components/progress-chart/progress-chart.component.cy.ts",
+    "src/app/components/diff-summary/diff-summary.component.cy.ts",
+    "src/app/components/fun-fact/fun-fact.component.cy.ts",
+    "src/app/components/upload/upload.component.cy.ts"
+  ],
   "include": [
     "src/**/*.spec.ts",
+    "src/**/*.cy.ts",
+    "cypress/**/*.ts",
     "src/**/*.d.ts"
   ]
 }
