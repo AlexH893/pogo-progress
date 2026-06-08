@@ -31,12 +31,26 @@
           <line x1="6" y1="20" x2="6" y2="14"></line>
         </svg>
       </a>
-      <a routerLink="/" class="sidebar-link" title="Settings">
+      <a routerLink="/settings" routerLinkActive="active" class="sidebar-link" title="Settings">
         <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="3"></circle>
           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
         </svg>
       </a>
+    </div>
+
+    <div class="sidebar-auth" style="margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+      <ng-container *ngIf="user$ | async as user; else guestMode">
+        <div class="user-profile" style="display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0.5rem;" [title]="user.email">
+          <div class="avatar" style="width: 32px; height: 32px; border-radius: 50%; background: #81c784; color: #1a1a1a; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+            {{ user.name.charAt(0).toUpperCase() }}
+          </div>
+          <button class="logout-btn" (click)="signOut()" style="background: none; border: none; color: rgba(232, 245, 233, 0.5); font-size: 0.8rem; cursor: pointer; text-decoration: underline;">Sign Out</button>
+        </div>
+      </ng-container>
+      <ng-template #guestMode>
+        <div id="google-signin-btn" style="display: flex; justify-content: center; align-items: center; padding-bottom: 1rem;"></div>
+      </ng-template>
     </div>
   </nav>
 

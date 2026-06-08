@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { getApiUrl } from '../config';
+import { AuthService } from '../services/auth.service';
 
 @Component({
   selector: 'app-logbook',
@@ -12,8 +13,9 @@ export class LogbookComponent implements OnInit {
   editingRowId: number | null = null;
   editData: any = {};
   isLoading = true;
+  user$ = this.authService.user$;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private authService: AuthService) {}
 
   ngOnInit(): void {
     this.fetchData();

@@ -20,6 +20,7 @@ describe('Diff/Comparison Flow', () => {
   it('should show diff summary when uploading the same user twice', () => {
     // ── First upload: establish baseline stats ──
     cy.visit('/');
+    cy.login();
 
     cy.get('input[type="file"]').selectFile('cypress/fixtures/valor.jpg', { force: true });
 
@@ -38,6 +39,7 @@ describe('Diff/Comparison Flow', () => {
     // the backend will return previousStats but diffs will be zero.
     // The diff section should NOT appear when all diffs are 0.
     cy.visit('/');
+    cy.login();
 
     cy.get('input[type="file"]').selectFile('cypress/fixtures/valor.jpg', { force: true });
 
@@ -54,6 +56,7 @@ describe('Diff/Comparison Flow', () => {
   it('should show diff summary when a user corrects a stat value', () => {
     // Upload a screenshot first to establish baseline
     cy.visit('/');
+    cy.login();
 
     cy.get('input[type="file"]').selectFile('cypress/fixtures/valor.jpg', { force: true });
 
@@ -75,6 +78,7 @@ describe('Diff/Comparison Flow', () => {
 
     // ── Step 2: Upload the first screenshot (lower stats) ──
     cy.visit('/');
+    cy.login();
 
     cy.get('input[type="file"]').selectFile('cypress/fixtures/valor.jpg', { force: true });
 
@@ -94,20 +98,29 @@ describe('Diff/Comparison Flow', () => {
     cy.request('DELETE', 'http://localhost:3000/cleanup-test-data');
 
     // Post artificial lower stats for Stillworld to act as the "previous" entry
-    cy.request('POST', 'http://localhost:3000/post-data', {
-      username: 'Stillworld',
-      level: 75,
-      distanceWalked: 25000.0,
-      caught: 290000,
-      stopVisited: 170000,
-      totalXp: 300000000,
-    }).then((response) => {
-      expect(response.status).to.eq(200);
-      expect(response.body.success).to.be.true;
+    cy.request('GET', 'http://localhost:3000/auth/test-token').then((resp) => {
+      const token = resp.body.token;
+      cy.request({
+        method: 'POST',
+        url: 'http://localhost:3000/post-data',
+        headers: { Authorization: `Bearer ${token}` },
+        body: {
+          username: 'Stillworld',
+          level: 75,
+          distanceWalked: 25000.0,
+          caught: 290000,
+          stopVisited: 170000,
+          totalXp: 300000000,
+        }
+      }).then((response) => {
+        expect(response.status).to.eq(200);
+        expect(response.body.success).to.be.true;
+      });
     });
 
     // Now upload the real Stillworld screenshot (which has higher stats)
     cy.visit('/');
+    cy.login();
 
     cy.get('input[type="file"]').selectFile('cypress/fixtures/IMG_2031.PNG', { force: true });
 

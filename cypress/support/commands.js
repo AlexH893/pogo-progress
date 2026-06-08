@@ -41,3 +41,17 @@
 //
 // -- This will overwrite an existing command --
 // Cypress.Commands.overwrite("visit", (originalFn, url, options) => { ... })
+
+Cypress.Commands.add('login', () => {
+  cy.request('GET', 'http://localhost:3000/auth/test-token').then((resp) => {
+    const { token, user } = resp.body;
+    cy.window().then((win) => {
+      if (win.mockAuth) {
+        win.mockAuth(user, token);
+      } else {
+        win.localStorage.setItem('auth_token', token);
+        win.localStorage.setItem('auth_user', JSON.stringify(user));
+      }
+    });
+  });
+});
