@@ -107,7 +107,7 @@ module.exports = function (app, db) {
       const testUsernames = [
         'Stillworld', 'crosspawz', 'Swagpapa209', 
         'DarkraiPH1111', 'TheSleepySiren1', 'TheSleepySirenl', 
-        'RedEliGmz', 'RedEliGm'
+        'RedEliGmz', 'RedEliGm', 'Zaford42'
       ];
       
       const placeholders = testUsernames.map(() => '?').join(',');

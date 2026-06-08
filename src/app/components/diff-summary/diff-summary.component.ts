@@ -11,7 +11,8 @@ export class DiffSummaryComponent {
   @Input() editingFields: Record<string, boolean> = {};
 
   hasAnyDiffs(): boolean {
-    return this.statDiffs !== null;
+    if (!this.statDiffs) return false;
+    return Object.values(this.statDiffs).some(val => val !== 0);
   }
 
   formatDiffCount(val: number): string {

@@ -37,5 +37,10 @@
     "src/**/*.d.ts",
     "src/**/*.cy.ts",
     "cypress/**/*.ts"
+  ],
+  "references": [
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.spec.json" },
+    { "path": "./tsconfig.cy.json" }
   ]
 }

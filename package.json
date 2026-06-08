@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "ng:start": "ng serve",
+    "ng:start": "ng serve --host 127.0.0.1",
     "server": "node ./server/app.js",
     "start": "concurrently \"npm run ng:start\" \"npm run server\"",
     "build": "ng build",
