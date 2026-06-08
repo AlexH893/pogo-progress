@@ -1,4 +1,4 @@
-<header class="home__header glass-card">
+<header class="home__header glass-card" *ngIf="state !== 'success'">
   <h1>Activity Hub</h1>
   <p class="home__instructions">
     Upload a <strong>trainer profile</strong> screenshot from Pokémon GO.
@@ -8,6 +8,7 @@
 
 <section
   class="drop-zone glass-card"
+  *ngIf="state !== 'success'"
   [class.drop-zone--active]="isDragOver"
   [class.drop-zone--disabled]="isProcessing"
   (dragover)="onDragOver($event)"

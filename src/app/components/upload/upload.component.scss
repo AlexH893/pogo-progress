@@ -124,3 +124,29 @@
   margin: 0;
 }
 
+@media (max-width: 768px) {
+  .home__header {
+    padding: 1rem 0.5rem;
+    
+    h1 {
+      font-size: 1.2rem;
+      margin-bottom: 0.25rem;
+    }
+    
+    .home__instructions {
+      font-size: 0.85rem;
+    }
+  }
+
+  .drop-zone {
+    padding: .8rem 1rem;
+    margin-top: 0.5rem;
+    
+    .upload-icon {
+      svg {
+        width: 36px;
+        height: 36px;
+      }
+    }
+  }
+}
