@@ -8,6 +8,7 @@
 
   @media (min-width: 992px) {
     grid-template-columns: 400px 1fr;
+    grid-template-rows: min-content 1fr;
     grid-template-areas:
       "left right"
       "entry right";

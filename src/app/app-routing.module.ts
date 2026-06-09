@@ -6,7 +6,8 @@ import { LogbookComponent } from './logbook/logbook.component';
 
 const routes: Routes = [
   { path: '', component: HomeComponent },
-  { path: 'logbook', component: LogbookComponent }
+  { path: 'logbook', component: LogbookComponent },
+  { path: 'settings', loadChildren: () => import('./settings/settings.module').then(m => m.SettingsModule) }
 ];
 
 @NgModule({

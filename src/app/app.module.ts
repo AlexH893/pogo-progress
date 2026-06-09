@@ -1,7 +1,7 @@
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { AppRoutingModule } from './app-routing.module';
-import { HttpClientModule } from '@angular/common/http';
+import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
 
 import { AppComponent } from './app.component';
 import { HomeComponent } from './home/home.component';
@@ -13,6 +13,7 @@ import { DiffSummaryComponent } from './components/diff-summary/diff-summary.com
 import { StatCardComponent } from './components/stat-card/stat-card.component';
 import { FunFactComponent } from './components/fun-fact/fun-fact.component';
 import { ProgressChartComponent } from './components/progress-chart/progress-chart.component';
+import { AuthHttpInterceptor } from './services/auth-http.interceptor';
 
 @NgModule({
   declarations: [
@@ -31,7 +32,9 @@ import { ProgressChartComponent } from './components/progress-chart/progress-cha
     HttpClientModule,
     FormsModule
   ],
-  providers: [],
+  providers: [
+    { provide: HTTP_INTERCEPTORS, useClass: AuthHttpInterceptor, multi: true }
+  ],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

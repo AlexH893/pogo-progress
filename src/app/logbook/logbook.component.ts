@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { getApiUrl } from '../config';
+import { AuthService } from '../services/auth.service';
 
 @Component({
   selector: 'app-logbook',
@@ -9,11 +10,14 @@ import { getApiUrl } from '../config';
 })
 export class LogbookComponent implements OnInit {
   stats: any[] = [];
+  chartData: any[] = [];
+  primaryTrainer: string = '';
   editingRowId: number | null = null;
   editData: any = {};
   isLoading = true;
+  user$ = this.authService.user$;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private authService: AuthService) {}
 
   ngOnInit(): void {
     this.fetchData();
@@ -24,6 +28,7 @@ export class LogbookComponent implements OnInit {
     this.http.get<any[]>(`${getApiUrl()}/get-data`).subscribe({
       next: (data) => {
         this.stats = data;
+        this.updateChartData();
         this.isLoading = false;
       },
       error: (err) => {
@@ -31,6 +36,19 @@ export class LogbookComponent implements OnInit {
         this.isLoading = false;
       }
     });
+  }
+
+  updateChartData(): void {
+    if (this.stats && this.stats.length > 0) {
+      const firstEntryWithUser = this.stats.find(row => row.username);
+      this.primaryTrainer = firstEntryWithUser ? firstEntryWithUser.username : '';
+      
+      this.chartData = [...this.stats]
+        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    } else {
+      this.chartData = [];
+      this.primaryTrainer = '';
+    }
   }
 
   startEdit(row: any): void {
@@ -78,5 +96,16 @@ export class LogbookComponent implements OnInit {
 
   formatDate(dateStr: string): string {
     return new Date(dateStr).toLocaleString();
+  }
+
+  getDisplayDistance(distance: any, unit: string | null): string {
+    if (distance === null || distance === undefined || distance === '') return '—';
+    const numDistance = Number(distance);
+    if (isNaN(numDistance)) return String(distance);
+    
+    if (unit === 'mi') {
+      return (numDistance * 0.621371).toLocaleString(undefined, { maximumFractionDigits: 1 }) + ' mi';
+    }
+    return numDistance.toLocaleString(undefined, { maximumFractionDigits: 1 }) + ' km';
   }
 }

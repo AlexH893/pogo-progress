@@ -1,5 +1,6 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, NgZone, ChangeDetectorRef, ViewChild, ElementRef } from '@angular/core';
+import { Component, NgZone, ChangeDetectorRef, ViewChild, ElementRef, OnInit, OnDestroy } from '@angular/core';
+import { Subscription } from 'rxjs';
 import Chart from 'chart.js/auto';
 import { ProfileStats } from '../models/profile-stats';
 import {
@@ -10,6 +11,7 @@ import {
 } from '../services/profile-ocr.service';
 import { FunFactService } from '../services/fun-fact.service';
 import { getApiUrl } from '../config';
+import { AuthService } from '../services/auth.service';
 
 type PageState = 'idle' | 'processing' | 'success' | 'error';
 
@@ -18,7 +20,7 @@ type PageState = 'idle' | 'processing' | 'success' | 'error';
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.scss'],
 })
-export class HomeComponent {
+export class HomeComponent implements OnInit, OnDestroy {
   state: PageState = 'idle';
   previewUrl: string | null = null;
   username: string = '';
@@ -52,15 +54,66 @@ export class HomeComponent {
     entryName: false,
   };
 
-
+  private authSub: Subscription | null = null;
 
   constructor(
     private readonly profileOcr: ProfileOcrService, 
     private http: HttpClient,
     private ngZone: NgZone,
     private cdr: ChangeDetectorRef,
-    private funFactService: FunFactService
+    private funFactService: FunFactService,
+    public authService: AuthService
   ) {}
+
+  ngOnInit() {
+    this.authSub = this.authService.user$.subscribe(user => {
+      // If user logs in after uploading a screenshot
+      if (user && this.state === 'success' && this.stats && !this.currentStatId) {
+        this.postStatsToBackend();
+      }
+    });
+  }
+
+  ngOnDestroy() {
+    if (this.authSub) {
+      this.authSub.unsubscribe();
+    }
+  }
+
+  postStatsToBackend() {
+    if (!this.username || !this.stats) return;
+
+    this.http
+      .post<{success: boolean, statId?: number, previousStats?: any}>(`${getApiUrl()}/post-data`, { 
+        username: this.username,
+        level: this.stats.level,
+        distanceWalked: this.stats.distanceWalked,
+        caught: this.stats.pokemonCaught,
+        stopVisited: this.stats.pokestopsVisited,
+        totalXp: this.stats.totalXp,
+        entryName: this.stats.entryName
+      })
+      .subscribe({
+        next: (res) => {
+          console.log('Posted stats:', res);
+          if (res.statId) {
+            this.currentStatId = res.statId;
+          }
+          if (res.previousStats) {
+            this.previousStats = res.previousStats;
+          }
+          this.calculateDiffs();
+          this.fetchUserHistory(this.username);
+        },
+        error: (err) => {
+          console.error('Failed to post stats:', err);
+          if (err.status === 403) {
+            this.state = 'error';
+            this.errorMessage = err.error?.error || 'This trainer is linked to another account.';
+          }
+        },
+      });
+  }
 
   get isProcessing(): boolean {
     return this.state === 'processing';
@@ -137,35 +190,49 @@ export class HomeComponent {
       this.displayStats = { ...result.stats };
       this.rawOcrText = result.rawText;
       this.state = 'success';
-      this.generateFunFacts();
+      
+      // Load user preferences before generating fun facts
+      if (this.username && this.authService.getToken()) {
+        try {
+          const prefs = await this.http.get<any[]>(`${getApiUrl()}/user-preferences`).toPromise();
+          const userPref = prefs?.find(p => p.username === this.username);
+          
+          if (userPref) {
+            // Apply default unit if OCR didn't catch it
+            if (!this.stats.distanceUnit) {
+              this.stats.distanceUnit = userPref.default_unit;
+              if (this.displayStats) this.displayStats.distanceUnit = userPref.default_unit;
+            }
+            
+            // Only generate fun facts if enabled
+            if (userPref.show_fun_facts) {
+              this.generateFunFacts();
+            } else {
+              this.funFact = null;
+              this.allFunFacts = [];
+            }
+          } else {
+            // Default behavior if no preferences found
+            this.generateFunFacts();
+          }
+        } catch (err) {
+          console.error('Failed to load preferences for stats rendering:', err);
+          this.generateFunFacts();
+        }
+      } else {
+        // Guest mode behavior
+        this.generateFunFacts();
+      }
 
       // Post stats to backend
       if (this.username && this.stats) {
-        this.http
-          .post<{success: boolean, statId?: number, previousStats?: any}>(`${getApiUrl()}/post-data`, { 
-            username: this.username,
-            level: this.stats.level,
-            distanceWalked: this.stats.distanceWalked,
-            caught: this.stats.pokemonCaught,
-            stopVisited: this.stats.pokestopsVisited,
-            totalXp: this.stats.totalXp,
-            entryName: this.stats.entryName
-          })
-          .subscribe({
-            next: (res) => {
-              console.log('Posted stats:', res);
-              if (res.statId) {
-                this.currentStatId = res.statId;
-              }
-              if (res.previousStats) {
-                this.previousStats = res.previousStats;
-              }
-              this.calculateDiffs();
-              this.fetchUserHistory(this.username);
-              
-            },
-            error: (err) => console.error('Failed to post stats:', err),
-          });
+        if (!this.authService.getToken()) {
+          // Guest mode: do not save to DB, skip fetch history
+          setTimeout(() => this.authService.renderSignInButton('home-google-signin-btn'), 100);
+          return;
+        }
+
+        this.postStatsToBackend();
       }
     } catch (err) {
       this.state = 'error';
@@ -230,6 +297,10 @@ export class HomeComponent {
       entryName: this.stats.entryName
     };
 
+    if (!this.authService.getToken()) {
+      return; // Guests don't save corrections
+    }
+
     if (this.currentStatId) {
       this.http
         .put(`${getApiUrl()}/update-data/${this.currentStatId}`, payload)
@@ -238,7 +309,10 @@ export class HomeComponent {
             console.log(`Updated corrected ${field}:`, res);
             this.fetchUserHistory(this.username);
           },
-          error: (err) => console.error(`Failed to update corrected ${field}:`, err),
+          error: (err) => {
+            console.error(`Failed to update corrected ${field}:`, err);
+            if (err.status === 403) alert(err.error?.error || 'Not authorized.');
+          },
         });
     } else {
       this.http
@@ -255,7 +329,10 @@ export class HomeComponent {
             this.calculateDiffs(false);
             this.fetchUserHistory(this.username);
           },
-          error: (err) => console.error(`Failed to post corrected ${field}:`, err),
+          error: (err) => {
+            console.error(`Failed to post corrected ${field}:`, err);
+            if (err.status === 403) alert(err.error?.error || 'Not authorized.');
+          },
         });
     }
   }

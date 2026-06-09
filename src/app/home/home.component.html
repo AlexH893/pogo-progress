@@ -130,6 +130,21 @@
       [userHistory]="userHistory"
       [username]="username">
     </app-progress-chart>
+
+    <!-- Guest Mode Prompt -->
+    <div *ngIf="state === 'success' && stats && !(authService.user$ | async)" class="guest-prompt glass-card" style="text-align: center; padding: 2rem; border-color: rgba(129, 199, 132, 0.3); margin-top: 2rem;">
+      <h3 style="margin-top: 0;">Sign in to save your progress</h3>
+      <p style="color: rgba(232, 245, 233, 0.7); margin-bottom: 1.5rem;">Sign in with Google to track your stats over time, view historical charts, and track multiple Pokémon GO accounts.</p>
+      <div id="home-google-signin-btn" style="display: flex; justify-content: center;"></div>
+    </div>
+
+    <!-- Authenticated Status -->
+    <div *ngIf="state === 'success' && stats && (authService.user$ | async) as user" class="auth-success-prompt glass-card" style="text-align: center; padding: 1.5rem; border-color: rgba(129, 199, 132, 0.5); margin-top: 2rem; background: rgba(129, 199, 132, 0.05);">
+      <p style="margin: 0; color: #81c784; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+        Signed in as <strong>{{ user.name }}</strong>. Your progress is automatically saved!
+      </p>
+    </div>
   </div>
 
   <!-- ENTRY NAME SECTION: Placed at the end of the DOM so it drops to bottom on mobile, but positioned under left-col on desktop via CSS Grid -->
