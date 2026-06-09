@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { SettingsService, UserPreferences } from './settings.service';
 import { AuthService } from '../services/auth.service';
 import { saveAs } from 'file-saver';
@@ -10,14 +11,15 @@ import { saveAs } from 'file-saver';
 })
 export class SettingsComponent implements OnInit {
 
-  preferences: UserPreferences[] = [];
+  preference: UserPreferences | null = null;
   isLoading = true;
   error = '';
   successMsg = '';
 
   constructor(
     private settingsService: SettingsService,
-    public authService: AuthService
+    public authService: AuthService,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -32,8 +34,8 @@ export class SettingsComponent implements OnInit {
   loadPreferences(): void {
     this.isLoading = true;
     this.settingsService.getUserPreferences().subscribe({
-      next: (prefs) => {
-        this.preferences = prefs;
+      next: (pref) => {
+        this.preference = pref;
         this.isLoading = false;
       },
       error: (err) => {
@@ -72,11 +74,11 @@ export class SettingsComponent implements OnInit {
   }
 
   unlinkTrainer(username: string): void {
-    if (confirm(`Are you sure you want to unlink the trainer "${username}" from your account? You will no longer be able to edit these stats.`)) {
+    if (confirm(`Are you sure you want to unlink your trainer from your account? You will no longer be able to edit these stats.`)) {
       this.settingsService.unlinkTrainer(username).subscribe({
         next: () => {
-          this.preferences = this.preferences.filter(p => p.username !== username);
-          this.successMsg = `Unlinked ${username}`;
+          this.preference = null;
+          this.successMsg = `Unlinked trainer successfully.`;
           setTimeout(() => this.successMsg = '', 3000);
         },
         error: (err) => {
@@ -92,6 +94,7 @@ export class SettingsComponent implements OnInit {
       this.settingsService.deleteAccount().subscribe({
         next: () => {
           this.authService.signOut();
+          this.router.navigate(['/']);
         },
         error: (err) => {
           this.error = 'Failed to delete account.';

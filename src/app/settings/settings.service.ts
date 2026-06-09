@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { getApiUrl } from '../config';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 export interface UserPreferences {
   username: string;
@@ -16,8 +17,10 @@ export class SettingsService {
 
   constructor(private http: HttpClient) { }
 
-  getUserPreferences(): Observable<UserPreferences[]> {
-    return this.http.get<UserPreferences[]>(`${getApiUrl()}/user-preferences`);
+  getUserPreferences(): Observable<UserPreferences | null> {
+    return this.http.get<UserPreferences[]>(`${getApiUrl()}/user-preferences`).pipe(
+      map(prefs => prefs.length > 0 ? prefs[0] : null)
+    );
   }
 
   updateUserPreferences(username: string, defaultUnit: 'km' | 'mi', showFunFacts: boolean): Observable<{success: boolean}> {

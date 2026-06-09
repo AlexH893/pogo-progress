@@ -11,6 +11,10 @@
     <span class="loading-text">Loading entries...</span>
   </div>
 
+  <div *ngIf="!isLoading && chartData.length > 0" class="logbook-chart-section">
+    <app-progress-chart [userHistory]="chartData" [username]="primaryTrainer"></app-progress-chart>
+  </div>
+
   <div class="table-responsive" *ngIf="!isLoading">
     <table class="logbook-table">
       <thead>
@@ -20,7 +24,7 @@
           <th>Label</th>
           <th>Level</th>
           <th>Total XP</th>
-          <th>Distance (km)</th>
+          <th>Distance</th>
           <th>Caught</th>
           <th>PokéStops</th>
           <th>Actions</th>
@@ -35,7 +39,7 @@
             <td>{{ row.entry_name || '—' }}</td>
             <td>{{ row.level || '—' }}</td>
             <td>{{ row.total_xp ? row.total_xp.toLocaleString() : '—' }}</td>
-            <td>{{ row.distance_walked !== null ? row.distance_walked.toLocaleString() : '—' }}</td>
+            <td>{{ row.distance_walked !== null ? getDisplayDistance(row.distance_walked, row.default_unit) : '—' }}</td>
             <td>{{ row.caught !== null ? row.caught.toLocaleString() : '—' }}</td>
             <td>{{ row.stop_visited !== null ? row.stop_visited.toLocaleString() : '—' }}</td>
             <td class="actions">

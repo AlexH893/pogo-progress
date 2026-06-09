@@ -114,3 +114,8 @@
   padding: 4rem;
   gap: 1rem;
 }
+
+.logbook-chart-section {
+  margin-bottom: 2rem;
+  min-height: 400px; /* Provide some height for the chart to render properly */
+}

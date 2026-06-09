@@ -21,13 +21,13 @@
     {{ successMsg }}
   </div>
 
-  <div *ngIf="!isLoading && preferences.length > 0" class="settings-content">
+  <div *ngIf="!isLoading && preference" class="settings-content">
     
     <!-- Trainer Settings Cards -->
-    <div *ngFor="let pref of preferences" class="glass-card settings-group">
+    <div class="glass-card settings-group">
       <div class="group-header">
-        <h3>Trainer: <span class="trainer-name">{{ pref.username }}</span></h3>
-        <button class="action-btn danger-text" (click)="unlinkTrainer(pref.username)">Unlink</button>
+        <h3>Trainer: <span class="trainer-name">{{ preference.username }}</span></h3>
+        <button class="action-btn danger-text" (click)="unlinkTrainer(preference.username)">Unlink</button>
       </div>
 
       <div class="setting-item">
@@ -36,7 +36,7 @@
           <span class="setting-desc">Used when the OCR cannot determine the unit.</span>
         </div>
         <div class="setting-control">
-          <select [(ngModel)]="pref.default_unit" (change)="savePreferences(pref)" class="glass-select">
+          <select [(ngModel)]="preference.default_unit" (change)="savePreferences(preference)" class="glass-select">
             <option value="km">Kilometers (km)</option>
             <option value="mi">Miles (mi)</option>
           </select>
@@ -50,7 +50,7 @@
         </div>
         <div class="setting-control">
           <label class="switch">
-            <input type="checkbox" [(ngModel)]="pref.show_fun_facts" (change)="savePreferences(pref)">
+            <input type="checkbox" [(ngModel)]="preference.show_fun_facts" (change)="savePreferences(preference)">
             <span class="slider round"></span>
           </label>
         </div>
@@ -66,7 +66,7 @@
       <div class="setting-item">
         <div class="setting-info">
           <label>Export Data</label>
-          <span class="setting-desc">Download all your linked trainers' stats as a JSON file.</span>
+          <span class="setting-desc">Download your stats as a JSON file.</span>
         </div>
         <div class="setting-control">
           <button class="action-btn primary" (click)="exportData()">Export JSON</button>
@@ -86,8 +86,11 @@
 
   </div>
 
-  <div *ngIf="!isLoading && preferences.length === 0 && !error" class="glass-card empty-state">
-    <p>You haven't uploaded any data for any trainers yet.</p>
-    <a routerLink="/" class="action-btn primary">Go to Home</a>
+  <div *ngIf="!isLoading && !preference && !error" class="glass-card empty-state">
+    <p>You haven't uploaded any data for your trainer yet.</p>
+    <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1.5rem;">
+      <a routerLink="/" class="action-btn primary">Go to Home</a>
+      <button class="action-btn danger" (click)="deleteAccount()">Delete Account</button>
+    </div>
   </div>
 </div>

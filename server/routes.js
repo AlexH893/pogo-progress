@@ -66,21 +66,31 @@ module.exports = function (app, db) {
       
       // 1. Handle Users Table
       const [rows] = await db.execute('SELECT id, google_id FROM users WHERE username = ?', [username]);
+      
+      if (req.user) {
+        const [existingUsers] = await db.execute('SELECT username FROM users WHERE google_id = ?', [req.user.googleId]);
+        if (existingUsers.length > 0 && existingUsers[0].username !== username) {
+          return res.status(403).json({ error: 'You can only link one trainer to your account.' });
+        }
+      }
+
       if (rows.length > 0) {
         const userRow = rows[0];
-        if (userRow.google_id && req.user && userRow.google_id !== req.user.googleId) {
-          return res.status(403).json({ error: 'This trainer is linked to another account.' });
+        if (userRow.google_id) {
+          if (!req.user || userRow.google_id !== req.user.googleId) {
+            return res.status(403).json({ error: 'This trainer is linked to an account. Please log in to upload stats.' });
+          }
         }
         if (!userRow.google_id && req.user) {
-          await db.execute('UPDATE users SET date_updated = NOW(), google_id = ?, google_email = ?, google_display_name = ? WHERE username = ?', 
-            [req.user.googleId, req.user.email, req.user.name, username]);
+          await db.execute('UPDATE users SET date_updated = NOW(), google_id = ? WHERE username = ?', 
+            [req.user.googleId, username]);
         } else {
           await db.execute('UPDATE users SET date_updated = NOW() WHERE username = ?', [username]);
         }
       } else {
         if (req.user) {
-          await db.execute('INSERT INTO users (username, date_added, date_updated, google_id, google_email, google_display_name) VALUES (?, NOW(), NOW(), ?, ?, ?)', 
-            [username, req.user.googleId, req.user.email, req.user.name]);
+          await db.execute('INSERT INTO users (username, date_added, date_updated, google_id) VALUES (?, NOW(), NOW(), ?)', 
+            [username, req.user.googleId]);
         } else {
           await db.execute('INSERT INTO users (username, date_added, date_updated) VALUES (?, NOW(), NOW())', [username]);
         }
@@ -109,9 +119,22 @@ module.exports = function (app, db) {
       const statId = req.params.id;
       const { username, level, distanceWalked, caught, stopVisited, totalXp, entryName } = req.body;
       
-      const [userRows] = await db.execute('SELECT google_id FROM users WHERE username = ?', [username]);
-      if (userRows.length === 0 || userRows[0].google_id !== req.user.googleId) {
-        return res.status(403).json({ error: 'Not authorized to edit this trainer.' });
+      // 1. Verify ownership of the existing stat
+      const [statRows] = await db.execute('SELECT username FROM stats WHERE id = ?', [statId]);
+      if (statRows.length === 0) return res.status(404).json({ error: 'Not found' });
+      const originalUsername = statRows[0].username;
+      
+      const [originalUserRows] = await db.execute('SELECT google_id FROM users WHERE username = ?', [originalUsername]);
+      if (originalUserRows.length === 0 || originalUserRows[0].google_id !== req.user.googleId) {
+        return res.status(403).json({ error: 'Not authorized to edit this entry.' });
+      }
+
+      // 2. If the username is being changed, verify ownership of the new username too
+      if (username !== originalUsername) {
+        const [newUserRows] = await db.execute('SELECT google_id FROM users WHERE username = ?', [username]);
+        if (newUserRows.length === 0 || newUserRows[0].google_id !== req.user.googleId) {
+          return res.status(403).json({ error: 'Not authorized to assign to this trainer.' });
+        }
       }
 
       await db.execute(
@@ -148,10 +171,13 @@ module.exports = function (app, db) {
     }
   });
 
-  // Fetches all stats from the database
+  // Fetches stats from the database for the authenticated user
   app.get('/get-data', optionalAuth, async (req, res) => {
     try {
-      const [rows] = await db.execute('SELECT stats.*, users.google_id FROM stats LEFT JOIN users ON stats.username = users.username ORDER BY stats.created_at DESC');
+      if (!req.user) {
+        return res.json([]);
+      }
+      const [rows] = await db.execute('SELECT stats.*, users.google_id, users.default_unit FROM stats LEFT JOIN users ON stats.username = users.username WHERE users.google_id = ? ORDER BY stats.created_at DESC', [req.user.googleId]);
       res.json(rows);
     } catch (err) {
       console.error(err);
@@ -160,10 +186,21 @@ module.exports = function (app, db) {
   });
 
   // Fetches all stats for a specific user, sorted chronologically for charting
-  app.get('/get-user-stats/:username', async (req, res) => {
+  app.get('/get-user-stats/:username', optionalAuth, async (req, res) => {
     try {
       const username = req.params.username;
-      const [rows] = await db.execute('SELECT * FROM stats WHERE username = ? ORDER BY created_at ASC', [username]);
+      
+      const [userRows] = await db.execute('SELECT google_id FROM users WHERE username = ?', [username]);
+      if (userRows.length > 0) {
+        const userRow = userRows[0];
+        if (userRow.google_id) {
+          if (!req.user || userRow.google_id !== req.user.googleId) {
+            return res.status(403).json({ error: 'Private profile' });
+          }
+        }
+      }
+
+      const [rows] = await db.execute('SELECT id, username, level, distance_walked, caught, stop_visited, total_xp, entry_name, created_at FROM stats WHERE username = ? ORDER BY created_at ASC', [username]);
       res.json(rows);
     } catch (err) {
       console.error(err);
@@ -171,16 +208,7 @@ module.exports = function (app, db) {
     }
   });
 
-  // Fetches all users from the database
-  app.get('/get-users', async (req, res) => {
-    try {
-      const [rows] = await db.execute('SELECT * FROM users');
-      res.json(rows);
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: 'Database error' });
-    }
-  });
+
 
   // Settings and Preferences
   
@@ -246,7 +274,7 @@ module.exports = function (app, db) {
         return res.status(403).json({ error: 'Not authorized to unlink this trainer.' });
       }
 
-      await db.execute('UPDATE users SET google_id = NULL, google_email = NULL, google_display_name = NULL WHERE username = ?', [username]);
+      await db.execute('UPDATE users SET google_id = NULL WHERE username = ?', [username]);
       res.json({ success: true });
     } catch (err) {
       console.error(err);
@@ -258,15 +286,15 @@ module.exports = function (app, db) {
   app.delete('/delete-account', requireAuth, async (req, res) => {
     try {
       const [userRows] = await db.execute('SELECT username FROM users WHERE google_id = ?', [req.user.googleId]);
-      if (userRows.length === 0) {
-        return res.status(404).json({ error: 'No account found.' });
-      }
-      const usernames = userRows.map(r => r.username);
-      const placeholders = usernames.map(() => '?').join(',');
       
-      // Delete stats first due to foreign key constraints if any (even if implicit)
-      await db.execute(`DELETE FROM stats WHERE username IN (${placeholders})`, usernames);
-      await db.execute(`DELETE FROM users WHERE google_id = ?`, [req.user.googleId]);
+      if (userRows.length > 0) {
+        const usernames = userRows.map(r => r.username);
+        const placeholders = usernames.map(() => '?').join(',');
+        
+        // Delete stats first due to foreign key constraints if any (even if implicit)
+        await db.execute(`DELETE FROM stats WHERE username IN (${placeholders})`, usernames);
+        await db.execute(`DELETE FROM users WHERE google_id = ?`, [req.user.googleId]);
+      }
       
       res.json({ success: true });
     } catch (err) {
@@ -277,6 +305,9 @@ module.exports = function (app, db) {
 
   // Cleanup endpoint for Cypress tests
   app.delete('/cleanup-test-data', async (req, res) => {
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(403).json({ error: 'Not allowed in production' });
+    }
     try {
       const testUsernames = [
         'Stillworld', 'crosspawz', 'Swagpapa209', 
