@@ -30,7 +30,7 @@ app.use(cors({
   origin: [
     'http://localhost:4200',
     'https://pogo-progress.onrender.com',
-    'https://alexhaefner.github.io'
+    'https://alexh893.github.io'
   ]
 }));
 
