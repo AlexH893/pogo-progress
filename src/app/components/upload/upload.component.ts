@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ViewChild, ElementRef } from '@angular/core';
 
 @Component({
   selector: 'app-upload',
@@ -10,6 +10,8 @@ export class UploadComponent {
   @Input() previewUrl: string | null = null;
   @Input() state: string = 'idle';
   @Input() errorMessage: string = '';
+  
+  @ViewChild('exampleModal') exampleModal!: ElementRef<HTMLDialogElement>;
   
   @Output() fileDropped = new EventEmitter<File>();
   @Output() error = new EventEmitter<string>();
@@ -53,6 +55,24 @@ export class UploadComponent {
       this.fileDropped.emit(file);
     } else {
       this.error.emit('Please upload a valid image file (JPG, PNG, WEBP).');
+    }
+  }
+
+  openExampleModal(): void {
+    if (this.exampleModal) {
+      this.exampleModal.nativeElement.showModal();
+      setTimeout(() => {
+        this.exampleModal.nativeElement.classList.add('is-open');
+      }, 10);
+    }
+  }
+
+  closeExampleModal(): void {
+    if (this.exampleModal) {
+      this.exampleModal.nativeElement.classList.remove('is-open');
+      setTimeout(() => {
+        this.exampleModal.nativeElement.close();
+      }, 300);
     }
   }
 }
