@@ -42,7 +42,7 @@
     <div class="sidebar-auth" style="margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 1rem;">
       <ng-container *ngIf="user$ | async as user; else guestMode">
         <div class="user-profile" style="display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0.5rem;" [title]="user.email">
-          <div class="avatar" style="width: 32px; height: 32px; border-radius: 50%; background: #81c784; color: #1a1a1a; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+          <div class="avatar" style="width: 32px; height: 32px; border-radius: 50%; background: var(--color-primary); color: var(--color-base); display: flex; align-items: center; justify-content: center; font-weight: bold;">
             {{ user.name.charAt(0).toUpperCase() }}
           </div>
           <button class="logout-btn" (click)="signOut()" style="background: none; border: none; color: rgba(232, 245, 233, 0.5); font-size: 0.8rem; cursor: pointer; text-decoration: underline;">Sign Out</button>

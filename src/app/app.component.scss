@@ -18,7 +18,7 @@
 }
 
 .sidebar-logo {
-  color: #81c784;
+  color: var(--color-primary);
   margin-bottom: 3rem;
   filter: drop-shadow(0 0 8px rgba(129, 199, 132, 0.4));
 }
@@ -46,9 +46,9 @@
   }
 
   &.active {
-    color: #81c784;
+    color: var(--color-primary);
     background: rgba(129, 199, 132, 0.1);
-    box-shadow: inset 2px 0 0 #81c784;
+    box-shadow: inset 2px 0 0 var(--color-primary);
   }
 }
 

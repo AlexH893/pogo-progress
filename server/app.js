@@ -8,7 +8,10 @@ const rateLimit = require("express-rate-limit");
 const app = express();
 
 // Use DATABASE_URL from .env file or environment variables
-const db = mysql.createPool(process.env.DATABASE_URL);
+const db = mysql.createPool({
+  uri: process.env.DATABASE_URL,
+  timezone: 'Z'
+});
 
 // App configurations
 app.use(helmet({

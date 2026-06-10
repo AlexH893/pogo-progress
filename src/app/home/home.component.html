@@ -19,13 +19,26 @@
 
 
 
-    <div *ngIf="state === 'error'" class="status status--error glass-card" role="alert">
-      <p>{{ errorMessage }}</p>
-    </div>
   </div>
 
   <!-- RIGHT COLUMN: Stats Profile & History -->
   <div class="right-col">
+    <section *ngIf="isProcessing" class="stats glass-card" aria-hidden="true">
+      <div class="profile-header">
+        <div class="profile-avatar skeleton" style="border: none;"></div>
+        <div class="profile-info">
+          <div class="skeleton" style="width: 100px; height: 16px; margin-bottom: 8px;"></div>
+          <div class="skeleton" style="width: 150px; height: 24px;"></div>
+        </div>
+      </div>
+      <dl class="stats__grid dashboard-stats-grid">
+        <div class="stats__item dashboard-stat-card" *ngFor="let i of [1,2,3,4,5]">
+          <dt class="skeleton" style="width: 60px; height: 14px; margin-bottom: 8px;"></dt>
+          <dd class="skeleton" style="width: 80px; height: 24px;"></dd>
+        </div>
+      </dl>
+    </section>
+
     <section *ngIf="state === 'success' && stats" class="stats glass-card" aria-live="polite">
       <div class="profile-header">
         <div class="profile-avatar">
@@ -49,13 +62,11 @@
       
       <!-- Username/Level inline editors -->
       <div *ngIf="editingFields.username" class="correction-box inline-correction">
-        <input #unameInput type="text" [value]="stats.username" placeholder="Enter username" (keyup.enter)="submitCorrection('username', unameInput.value)" />
-        <button (click)="submitCorrection('username', unameInput.value)">Save</button>
-        <button type="button" class="cancel-btn" (click)="toggleEdit('username')">Cancel</button>
+        <input #unameInput type="text" autofocus [value]="stats.username" placeholder="Enter username" (keyup.enter)="submitCorrection('username', unameInput.value)" (blur)="submitCorrection('username', unameInput.value)" />
       </div>
 
 
-      <dl class="stats__grid dashboard-stats-grid">
+      <dl class="stats__grid dashboard-stats-grid tabular-nums">
         <app-stat-card
           label="Level"
           [value]="stats.level"
@@ -132,49 +143,83 @@
     </app-progress-chart>
 
     <!-- Guest Mode Prompt -->
-    <div *ngIf="state === 'success' && stats && !(authService.user$ | async)" class="guest-prompt glass-card" style="text-align: center; padding: 2rem; border-color: rgba(129, 199, 132, 0.3); margin-top: 2rem;">
-      <h3 style="margin-top: 0;">Sign in to save your progress</h3>
-      <p style="color: rgba(232, 245, 233, 0.7); margin-bottom: 1.5rem;">Sign in with Google to track your stats over time, view historical charts, and track multiple Pokémon GO accounts.</p>
+    <div *ngIf="state === 'success' && stats && !(authService.user$ | async)" class="guest-prompt glass-card">
+      <h3>Sign in to save your progress</h3>
+      <p>Sign in with Google to track your stats over time, view historical charts, and track multiple Pokémon GO accounts.</p>
       <div id="home-google-signin-btn" style="display: flex; justify-content: center;"></div>
     </div>
 
     <!-- Authenticated Status -->
-    <div *ngIf="state === 'success' && stats && (authService.user$ | async) as user" class="auth-success-prompt glass-card" style="text-align: center; padding: 1.5rem; border-color: rgba(129, 199, 132, 0.5); margin-top: 2rem; background: rgba(129, 199, 132, 0.05);">
-      <p style="margin: 0; color: #81c784; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+    <div *ngIf="state === 'success' && stats && (authService.user$ | async) as user" class="auth-success-prompt glass-card">
+      <p>
         <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
         Signed in as <strong>{{ user.name }}</strong>. Your progress is automatically saved!
       </p>
     </div>
   </div>
 
-  <!-- ENTRY NAME SECTION: Placed at the end of the DOM so it drops to bottom on mobile, but positioned under left-col on desktop via CSS Grid -->
+  <!-- ENTRY NAME AND DATE SECTION -->
   <section *ngIf="state === 'success' && stats" class="entry-name-section glass-card">
+    
+    <!-- Screenshot Date -->
+    <div class="entry-section-wrapper">
+      <h2>Screenshot Date</h2>
+      <div class="date-warning" *ngIf="usedFallbackDate" style="font-size: 0.85em; color: var(--error-color, #ff4c4c); margin-bottom: 8px;">
+        ⚠️ Exact time not found in image. Using file creation date. Please verify below.
+      </div>
+      <div class="entry-name-container">
+        <ng-container *ngIf="!editingFields.createdAt">
+          <span class="entry-name-display">
+            {{ screenshotDate | date:'medium' }}
+          </span>
+          <button class="edit-btn inline-edit" (click)="toggleEdit('createdAt')" aria-label="Edit date">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+          </button>
+        </ng-container>
+        <div *ngIf="editingFields.createdAt" class="correction-box inline-correction correction-wrapper">
+          <!-- Use local datetime string to prevent UTC timezone shift -->
+          <input #dateInput type="datetime-local" autofocus [value]="getLocalDatetimeString(screenshotDate)" (keyup.enter)="submitCorrection('createdAt', dateInput.value)" (blur)="submitCorrection('createdAt', dateInput.value)" />
+        </div>
+      </div>
+    </div>
+
     <h2>Upload Label</h2>
-    <div class="entry-name-container" style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
+    <div class="entry-name-container">
       <ng-container *ngIf="stats.entryName && !editingFields.entryName">
-        <span class="entry-name-display" style="font-size: 1.1rem; font-weight: 500;">{{ stats.entryName }}</span>
+        <span class="entry-name-display">{{ stats.entryName }}</span>
         <button class="edit-btn inline-edit" (click)="toggleEdit('entryName')" aria-label="Edit label">
           <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
         </button>
       </ng-container>
       <ng-container *ngIf="!stats.entryName && !editingFields.entryName">
-        <span class="entry-name-placeholder" style="color: rgba(232, 245, 233, 0.6); font-style: italic;">Add a custom label/note (e.g., 'Before GO Fest')</span>
+        <span class="entry-name-placeholder">Add a custom label/note (e.g., 'Before GO Fest')</span>
         <button class="edit-btn inline-edit" (click)="toggleEdit('entryName')" aria-label="Add label">
           <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
         </button>
       </ng-container>
-      <div *ngIf="editingFields.entryName" class="correction-box inline-correction" style="display: flex; gap: 0.5rem; width: 100%;">
-        <input #entryNameInput type="text" [value]="stats.entryName || ''" placeholder="Enter label" (keyup.enter)="submitCorrection('entryName', entryNameInput.value)" style="flex: 1;" />
-        <button (click)="submitCorrection('entryName', entryNameInput.value)">Save</button>
-        <button type="button" class="cancel-btn" (click)="toggleEdit('entryName')">Cancel</button>
+      <div *ngIf="editingFields.entryName" class="correction-box inline-correction correction-wrapper">
+        <input #entryNameInput type="text" autofocus [value]="stats.entryName || ''" placeholder="Enter label" (keyup.enter)="submitCorrection('entryName', entryNameInput.value)" (blur)="submitCorrection('entryName', entryNameInput.value)" />
       </div>
     </div>
   </section>
 </div>
 
 <div class="debug-section" *ngIf="rawOcrText" style="margin-top: 2rem">
-  <button type="button" class="debug-toggle" (click)="toggleDebug()">
+  <button type="button" class="debug-toggle" (click)="toggleDebug()" title="Displays raw text read using OCR">
     {{ showDebug ? "Hide" : "Show" }} OCR text
   </button>
   <pre *ngIf="showDebug && rawOcrText" class="debug-text">{{ rawOcrText }}</pre>
+</div>
+
+<!-- Toast Notification -->
+<div class="toast-container" *ngIf="errorMessage">
+  <div class="toast glass-card toast--error" role="alert">
+    <div class="toast-content">
+      <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+      <p>{{ errorMessage }}</p>
+    </div>
+    <button class="toast-close" (click)="dismissError()" aria-label="Close error">
+      <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+    </button>
+  </div>
 </div>
