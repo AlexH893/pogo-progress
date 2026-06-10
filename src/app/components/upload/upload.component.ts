@@ -10,6 +10,7 @@ export class UploadComponent {
   @Input() previewUrl: string | null = null;
   @Input() state: string = 'idle';
   @Input() errorMessage: string = '';
+  @Input() displayTutorial: boolean = true;
   
   @ViewChild('exampleModal') exampleModal!: ElementRef<HTMLDialogElement>;
   

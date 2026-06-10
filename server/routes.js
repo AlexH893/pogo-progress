@@ -101,11 +101,20 @@ module.exports = function (app, db) {
       // 2. Handle Stats Table
       let statId = null;
       if (distanceWalked !== undefined && caught !== undefined && totalXp !== undefined) {
+        // Check if it's the first upload ever
+        const [allStats] = await db.execute('SELECT id FROM stats WHERE username = ? LIMIT 1', [username]);
+        const isFirstEverUpload = allStats.length === 0;
+
         const [statResult] = await db.execute(
           'INSERT INTO stats (username, level, distance_walked, caught, stop_visited, total_xp, entry_name, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
           [username, level || null, distanceWalked || 0, caught || 0, stopVisited || null, totalXp || 0, entryName || null, insertDate]
         );
         statId = statResult.insertId;
+
+        // Turn off tutorial if this was their first successful upload
+        if (isFirstEverUpload) {
+          await db.execute('UPDATE users SET display_tutorial = false WHERE username = ?', [username]);
+        }
       }
 
       res.json({ success: true, statId, previousStats });
@@ -183,10 +192,14 @@ module.exports = function (app, db) {
   // Fetches stats from the database for the authenticated user
   app.get('/get-data', optionalAuth, async (req, res) => {
     try {
+      require('fs').appendFileSync('cypress-debug.log', `[get-data] req.user: ${JSON.stringify(req.user)}\n`);
       if (!req.user) {
+        console.log('[get-data] No user found in req');
         return res.json([]);
       }
       const [rows] = await db.execute('SELECT stats.*, users.google_id, users.default_unit FROM stats LEFT JOIN users ON stats.username = users.username WHERE users.google_id = ? ORDER BY stats.created_at DESC', [req.user.googleId]);
+      require('fs').appendFileSync('cypress-debug.log', `[get-data] Fetched ${rows.length} rows for google_id: ${req.user.googleId}\n`);
+      console.log(`[get-data] Fetched ${rows.length} rows for google_id: ${req.user.googleId}`);
       res.json(rows);
     } catch (err) {
       console.error(err);
@@ -224,7 +237,7 @@ module.exports = function (app, db) {
   // Get linked trainers and preferences for the current logged-in Google account
   app.get('/user-preferences', requireAuth, async (req, res) => {
     try {
-      const [rows] = await db.execute('SELECT username, default_unit, show_fun_facts FROM users WHERE google_id = ?', [req.user.googleId]);
+      const [rows] = await db.execute('SELECT username, default_unit, show_fun_facts, display_tutorial FROM users WHERE google_id = ?', [req.user.googleId]);
       res.json(rows);
     } catch (err) {
       console.error(err);
@@ -236,7 +249,7 @@ module.exports = function (app, db) {
   app.put('/user-preferences/:username', requireAuth, async (req, res) => {
     try {
       const username = req.params.username;
-      const { defaultUnit, showFunFacts } = req.body;
+      const { defaultUnit, showFunFacts, displayTutorial } = req.body;
       
       const [userRows] = await db.execute('SELECT google_id FROM users WHERE username = ?', [username]);
       if (userRows.length === 0 || userRows[0].google_id !== req.user.googleId) {
@@ -244,8 +257,8 @@ module.exports = function (app, db) {
       }
 
       await db.execute(
-        'UPDATE users SET default_unit = ?, show_fun_facts = ? WHERE username = ?',
-        [defaultUnit || 'km', showFunFacts !== false, username]
+        'UPDATE users SET default_unit = ?, show_fun_facts = ?, display_tutorial = ? WHERE username = ?',
+        [defaultUnit || 'km', showFunFacts !== false, displayTutorial !== false, username]
       );
 
       res.json({ success: true });

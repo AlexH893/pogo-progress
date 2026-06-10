@@ -44,6 +44,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   funFact: string | null = null;
   allFunFacts: string[] = [];
   showFunFactsEnabled: boolean = true;
+  displayTutorialEnabled: boolean = true;
 
   screenshotDate: Date | null = null;
   usedFallbackDate: boolean = false;
@@ -76,6 +77,19 @@ export class HomeComponent implements OnInit, OnDestroy {
       // If user logs in after uploading a screenshot
       if (user && this.state === 'success' && this.stats && !this.currentStatId) {
         this.postStatsToBackend();
+      }
+
+      // Fetch user preferences to initialize UI settings like the tutorial button
+      if (user) {
+        this.http.get<any[]>(`${getApiUrl()}/user-preferences`).subscribe({
+          next: (prefs) => {
+            if (prefs && prefs.length > 0) {
+              const pref = prefs[0];
+              this.displayTutorialEnabled = pref.display_tutorial !== 0 && pref.display_tutorial !== false;
+            }
+          },
+          error: (err) => console.error('Failed to load preferences on init', err)
+        });
       }
     });
   }
@@ -238,6 +252,7 @@ export class HomeComponent implements OnInit, OnDestroy {
             }
             
             this.showFunFactsEnabled = !!userPref.show_fun_facts;
+            this.displayTutorialEnabled = userPref.display_tutorial !== 0 && userPref.display_tutorial !== false;
 
             // Only generate fun facts if enabled
             if (this.showFunFactsEnabled) {
@@ -249,16 +264,19 @@ export class HomeComponent implements OnInit, OnDestroy {
           } else {
             // Default behavior if no preferences found
             this.showFunFactsEnabled = true;
+            this.displayTutorialEnabled = true;
             this.generateFunFacts();
           }
         } catch (err) {
           console.error('Failed to load preferences for stats rendering:', err);
           this.showFunFactsEnabled = true;
+          this.displayTutorialEnabled = true;
           this.generateFunFacts();
         }
       } else {
         // Guest mode behavior
         this.showFunFactsEnabled = true;
+        this.displayTutorialEnabled = true;
         this.generateFunFacts();
       }
 
@@ -413,6 +431,10 @@ export class HomeComponent implements OnInit, OnDestroy {
       pokestopsVisited: (this.stats.pokestopsVisited || 0) - (this.previousStats.stop_visited || 0),
       totalXp: (this.stats.totalXp || 0) - (this.previousStats.total_xp || 0),
     };
+    
+    console.log('calculated diffs:', diffs);
+    console.log('this.stats:', this.stats);
+    console.log('this.previousStats:', this.previousStats);
 
     if (
       diffs.level !== 0 ||
@@ -427,7 +449,7 @@ export class HomeComponent implements OnInit, OnDestroy {
       const prevDate = new Date(this.previousStats.created_at).getTime();
       this.diffDays = Math.max((now - prevDate) / (1000 * 60 * 60 * 24), 0);
 
-      if (this.diffDays >= 0.5) {
+      if (this.diffDays >= 1) {
         this.dailyAverages = {
           level: diffs.level / this.diffDays,
           distanceWalked: diffs.distanceWalked / this.diffDays,

@@ -4,6 +4,7 @@ export interface UserPreferences {
   username: string;
   default_unit: DistanceUnit;
   show_fun_facts: boolean;
+  display_tutorial: boolean;
 }
 
 export interface ProfileStats {

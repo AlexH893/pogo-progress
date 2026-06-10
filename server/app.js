@@ -32,6 +32,7 @@ app.use(bodyParser.json());
 app.use(cors({
   origin: [
     'http://localhost:4200',
+    'http://127.0.0.1:4200',
     'https://pogo-progress.onrender.com',
     'https://alexh893.github.io'
   ]
