@@ -55,6 +55,19 @@
           </label>
         </div>
       </div>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <label>Display Tutorial</label>
+          <span class="setting-desc">Show the "View Example Screenshot" button in the Activity Hub.</span>
+        </div>
+        <div class="setting-control">
+          <label class="switch">
+            <input type="checkbox" [(ngModel)]="preference.display_tutorial" (change)="savePreferences(preference)">
+            <span class="slider round"></span>
+          </label>
+        </div>
+      </div>
     </div>
 
     <!-- Data Management Card -->

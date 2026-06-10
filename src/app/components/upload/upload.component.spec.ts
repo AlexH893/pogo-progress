@@ -79,4 +79,18 @@ describe('UploadComponent', () => {
 
     expect(component.fileDropped.emit).not.toHaveBeenCalled();
   });
+
+  it('should display "View Example Screenshot" button when displayTutorial is true', () => {
+    component.displayTutorial = true;
+    fixture.detectChanges();
+    const button = fixture.debugElement.query(By.css('.view-example-btn'));
+    expect(button).toBeTruthy();
+  });
+
+  it('should hide "View Example Screenshot" button when displayTutorial is false', () => {
+    component.displayTutorial = false;
+    fixture.detectChanges();
+    const button = fixture.debugElement.query(By.css('.view-example-btn'));
+    expect(button).toBeNull();
+  });
 });

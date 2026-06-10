@@ -47,7 +47,7 @@ export class SettingsComponent implements OnInit {
   }
 
   savePreferences(pref: UserPreferences): void {
-    this.settingsService.updateUserPreferences(pref.username, pref.default_unit, pref.show_fun_facts).subscribe({
+    this.settingsService.updateUserPreferences(pref.username, pref.default_unit, pref.show_fun_facts, pref.display_tutorial).subscribe({
       next: () => {
         this.successMsg = `Settings saved for ${pref.username}`;
         setTimeout(() => this.successMsg = '', 3000);

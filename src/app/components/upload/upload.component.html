@@ -4,7 +4,7 @@
     Upload a <strong>trainer profile</strong> screenshot from Pokémon GO.
     Open your profile, scroll to <strong>Total Activity</strong>, and screenshot the stats section. Uploaded screenshots are only processed client-side and aren't stored.
   </p>
-  <button type="button" class="view-example-btn" (click)="openExampleModal()">
+  <button *ngIf="displayTutorial" type="button" class="view-example-btn" (click)="openExampleModal()">
     <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; vertical-align: text-bottom;">
       <circle cx="12" cy="12" r="10"></circle>
       <line x1="12" y1="16" x2="12" y2="12"></line>

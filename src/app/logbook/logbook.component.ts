@@ -13,6 +13,7 @@ export class LogbookComponent implements OnInit {
   chartData: any[] = [];
   primaryTrainer: string = '';
   editingRowId: number | null = null;
+  editingCell: { id: number, field: string } | null = null;
   editData: any = {};
   isLoading = true;
   user$ = this.authService.user$;
@@ -26,14 +27,16 @@ export class LogbookComponent implements OnInit {
 
   fetchData(): void {
     this.isLoading = true;
+    console.log('[Logbook] Fetching data...');
     this.http.get<any[]>(`${getApiUrl()}/get-data`).subscribe({
       next: (data) => {
+        console.log('[Logbook] Received data:', data);
         this.stats = data;
         this.updateChartData();
         this.isLoading = false;
       },
       error: (err) => {
-        console.error('Failed to fetch data', err);
+        console.error('[Logbook] Failed to fetch data:', err);
         this.isLoading = false;
       }
     });
@@ -81,6 +84,53 @@ export class LogbookComponent implements OnInit {
         this.editData = {};
       },
       error: (err) => console.error('Failed to update data', err)
+    });
+  }
+
+  startInlineEdit(row: any, field: string): void {
+    // Prevent starting inline edit if the whole row is already being edited
+    if (this.editingRowId === row.id) return;
+    this.editingCell = { id: row.id, field };
+  }
+
+  saveInlineEdit(row: any, field: string, value: string): void {
+    if (!this.editingCell || this.editingCell.id !== row.id || this.editingCell.field !== field) return;
+
+    let parsedValue: any = value;
+    if (field === 'distance_walked') {
+      parsedValue = parseFloat(value);
+      if (isNaN(parsedValue)) parsedValue = null;
+    } else if (['level', 'total_xp', 'caught', 'stop_visited'].includes(field)) {
+      parsedValue = parseInt(value, 10);
+      if (isNaN(parsedValue)) parsedValue = null;
+    }
+
+    if (row[field] === parsedValue) {
+      this.editingCell = null;
+      return;
+    }
+
+    row[field] = parsedValue;
+    this.editingCell = null;
+
+    const payload = {
+      username: row.username,
+      level: row.level,
+      distanceWalked: row.distance_walked,
+      caught: row.caught,
+      stopVisited: row.stop_visited,
+      totalXp: row.total_xp,
+      entryName: row.entry_name
+    };
+
+    this.http.put(`${getApiUrl()}/update-data/${row.id}`, payload).subscribe({
+      next: () => {
+        this.updateChartData();
+      },
+      error: (err) => {
+        console.error('Failed to update inline data', err);
+        this.fetchData(); // Rollback on error
+      }
     });
   }
 

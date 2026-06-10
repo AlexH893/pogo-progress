@@ -52,3 +52,5 @@ Thumbs.db
 .env.*.local
 *.md
 aiven-ca.pem
+cypress_diff*
+cypress_diff*.html

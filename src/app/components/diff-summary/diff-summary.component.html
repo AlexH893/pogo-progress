@@ -24,6 +24,10 @@
   </div>
 </section>
 
+<div id="debug-diffs" style="display: block; background: #fff; color: #000; z-index: 9999; position: relative;">
+  <pre>{{ statDiffs | json }}</pre>
+</div>
+
 <section *ngIf="dailyAverages" class="diff-section glass-card" style="margin-top: 1.5rem;">
   <h2>Current Pace</h2>
   <div class="diff-grid">

@@ -43,13 +43,34 @@
           <ng-container *ngIf="editingRowId !== row.id">
             <td>{{ formatDate(row.created_at) }}</td>
             <td *ngIf="showUploadedDate">{{ row.uploaded_at ? formatDate(row.uploaded_at) : '—' }}</td>
-            <td>{{ row.username || '—' }}</td>
-            <td>{{ row.entry_name || '—' }}</td>
-            <td>{{ row.level || '—' }}</td>
-            <td>{{ row.total_xp ? row.total_xp.toLocaleString() : '—' }}</td>
-            <td>{{ row.distance_walked !== null ? getDisplayDistance(row.distance_walked, row.default_unit) : '—' }}</td>
-            <td>{{ row.caught !== null ? row.caught.toLocaleString() : '—' }}</td>
-            <td>{{ row.stop_visited !== null ? row.stop_visited.toLocaleString() : '—' }}</td>
+            <td class="editable-cell" (click)="startInlineEdit(row, 'username')">
+              <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'username')">{{ row.username || '—' }}</span>
+              <input *ngIf="editingCell?.id === row.id && editingCell?.field === 'username'" type="text" [value]="row.username || ''" #inlineInput autofocus (keyup.enter)="inlineInput.blur()" (blur)="saveInlineEdit(row, 'username', inlineInput.value)" (click)="$event.stopPropagation()" class="inline-edit-input" />
+            </td>
+            <td class="editable-cell" (click)="startInlineEdit(row, 'entry_name')">
+              <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'entry_name')">{{ row.entry_name || '—' }}</span>
+              <input *ngIf="editingCell?.id === row.id && editingCell?.field === 'entry_name'" type="text" [value]="row.entry_name || ''" #inlineInput autofocus (keyup.enter)="inlineInput.blur()" (blur)="saveInlineEdit(row, 'entry_name', inlineInput.value)" (click)="$event.stopPropagation()" class="inline-edit-input" />
+            </td>
+            <td class="editable-cell" (click)="startInlineEdit(row, 'level')">
+              <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'level')">{{ row.level || '—' }}</span>
+              <input *ngIf="editingCell?.id === row.id && editingCell?.field === 'level'" type="number" [value]="row.level || ''" #inlineInput autofocus (keyup.enter)="inlineInput.blur()" (blur)="saveInlineEdit(row, 'level', inlineInput.value)" (click)="$event.stopPropagation()" class="inline-edit-input" />
+            </td>
+            <td class="editable-cell" (click)="startInlineEdit(row, 'total_xp')">
+              <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'total_xp')">{{ row.total_xp ? row.total_xp.toLocaleString() : '—' }}</span>
+              <input *ngIf="editingCell?.id === row.id && editingCell?.field === 'total_xp'" type="number" [value]="row.total_xp || ''" #inlineInput autofocus (keyup.enter)="inlineInput.blur()" (blur)="saveInlineEdit(row, 'total_xp', inlineInput.value)" (click)="$event.stopPropagation()" class="inline-edit-input" />
+            </td>
+            <td class="editable-cell" (click)="startInlineEdit(row, 'distance_walked')">
+              <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'distance_walked')">{{ row.distance_walked !== null ? getDisplayDistance(row.distance_walked, row.default_unit) : '—' }}</span>
+              <input *ngIf="editingCell?.id === row.id && editingCell?.field === 'distance_walked'" type="number" step="0.1" [value]="row.distance_walked !== null ? row.distance_walked : ''" #inlineInput autofocus (keyup.enter)="inlineInput.blur()" (blur)="saveInlineEdit(row, 'distance_walked', inlineInput.value)" (click)="$event.stopPropagation()" class="inline-edit-input" />
+            </td>
+            <td class="editable-cell" (click)="startInlineEdit(row, 'caught')">
+              <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'caught')">{{ row.caught !== null ? row.caught.toLocaleString() : '—' }}</span>
+              <input *ngIf="editingCell?.id === row.id && editingCell?.field === 'caught'" type="number" [value]="row.caught !== null ? row.caught : ''" #inlineInput autofocus (keyup.enter)="inlineInput.blur()" (blur)="saveInlineEdit(row, 'caught', inlineInput.value)" (click)="$event.stopPropagation()" class="inline-edit-input" />
+            </td>
+            <td class="editable-cell" (click)="startInlineEdit(row, 'stop_visited')">
+              <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'stop_visited')">{{ row.stop_visited !== null ? row.stop_visited.toLocaleString() : '—' }}</span>
+              <input *ngIf="editingCell?.id === row.id && editingCell?.field === 'stop_visited'" type="number" [value]="row.stop_visited !== null ? row.stop_visited : ''" #inlineInput autofocus (keyup.enter)="inlineInput.blur()" (blur)="saveInlineEdit(row, 'stop_visited', inlineInput.value)" (click)="$event.stopPropagation()" class="inline-edit-input" />
+            </td>
             <td class="actions">
               <ng-container *ngIf="(user$ | async)?.googleId === row.google_id">
                 <button class="action-btn edit-btn" (click)="startEdit(row)" title="Edit">

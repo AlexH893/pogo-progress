@@ -8,6 +8,7 @@ export interface UserPreferences {
   username: string;
   default_unit: 'km' | 'mi';
   show_fun_facts: boolean;
+  display_tutorial: boolean;
 }
 
 @Injectable({
@@ -23,10 +24,11 @@ export class SettingsService {
     );
   }
 
-  updateUserPreferences(username: string, defaultUnit: 'km' | 'mi', showFunFacts: boolean): Observable<{success: boolean}> {
+  updateUserPreferences(username: string, defaultUnit: 'km' | 'mi', showFunFacts: boolean, displayTutorial: boolean): Observable<{success: boolean}> {
     return this.http.put<{success: boolean}>(`${getApiUrl()}/user-preferences/${encodeURIComponent(username)}`, {
       defaultUnit,
-      showFunFacts
+      showFunFacts,
+      displayTutorial
     });
   }
 
