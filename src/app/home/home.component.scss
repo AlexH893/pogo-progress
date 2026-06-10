@@ -130,6 +130,70 @@ h4 {
   font-size: 0.9rem;
 }
 
+.guest-prompt {
+  text-align: center;
+  padding: 2rem;
+  border-color: rgba(129, 199, 132, 0.3);
+  margin-top: 2rem;
+
+  h3 {
+    margin-top: 0;
+  }
+
+  p {
+    color: rgba(232, 245, 233, 0.7);
+    margin-bottom: 1.5rem;
+  }
+}
+
+.auth-success-prompt {
+  text-align: center;
+  padding: 1.5rem;
+  border-color: rgba(129, 199, 132, 0.5);
+  margin-top: 2rem;
+  background: rgba(129, 199, 132, 0.05);
+
+  p {
+    margin: 0;
+    color: var(--color-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+}
+
+.entry-section-wrapper {
+  margin-bottom: 1.5rem;
+}
+
+.entry-name-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.entry-name-display {
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.entry-name-placeholder {
+  color: rgba(232, 245, 233, 0.6);
+  font-style: italic;
+}
+
+.correction-wrapper {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+  
+  input {
+    flex: 1;
+  }
+}
+
 @media only screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) {
   /* iPhone 14 / iPhone 15 */
 
@@ -181,4 +245,53 @@ h4 {
   .stats {
     padding: 1rem;
   }
+}
+
+.toast-container {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  z-index: 1000;
+  animation: slide-up 0.3s ease-out;
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-left: 4px solid var(--color-danger);
+  min-width: 300px;
+  max-width: 400px;
+
+  &--error {
+    background: rgba(239, 83, 80, 0.1);
+    border-color: var(--color-danger);
+  }
+
+  .toast-content {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex: 1;
+
+    svg { color: var(--color-danger); flex-shrink: 0; }
+    p { margin: 0; font-size: 0.95rem; line-height: 1.4; }
+  }
+
+  .toast-close {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    padding: 0.25rem;
+    display: flex;
+    
+    &:hover { color: #fff; }
+  }
+}
+
+@keyframes slide-up {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }

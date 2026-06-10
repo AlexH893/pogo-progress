@@ -55,13 +55,15 @@ module.exports = function (app, db) {
   // Posts user's stats to database. Used when the user first uploads a screenshot.
   app.post('/post-data', optionalAuth, async (req, res) => {
     try {
-      const { username, level, distanceWalked, caught, stopVisited, totalXp, entryName } = req.body;
+      const { username, level, distanceWalked, caught, stopVisited, totalXp, entryName, createdAt } = req.body;
       if (!username) {
         return res.status(400).json({ error: 'Username required' });
       }
 
+      const insertDate = createdAt ? new Date(createdAt) : new Date();
+
       // Fetch the previous stats before inserting
-      const [prevRows] = await db.execute('SELECT * FROM stats WHERE username = ? ORDER BY created_at DESC LIMIT 1', [username]);
+      const [prevRows] = await db.execute('SELECT * FROM stats WHERE username = ? AND created_at <= ? ORDER BY created_at DESC LIMIT 1', [username, insertDate]);
       const previousStats = prevRows.length > 0 ? prevRows[0] : null;
       
       // 1. Handle Users Table
@@ -100,8 +102,8 @@ module.exports = function (app, db) {
       let statId = null;
       if (distanceWalked !== undefined && caught !== undefined && totalXp !== undefined) {
         const [statResult] = await db.execute(
-          'INSERT INTO stats (username, level, distance_walked, caught, stop_visited, total_xp, entry_name) VALUES (?, ?, ?, ?, ?, ?, ?)',
-          [username, level || null, distanceWalked || 0, caught || 0, stopVisited || null, totalXp || 0, entryName || null]
+          'INSERT INTO stats (username, level, distance_walked, caught, stop_visited, total_xp, entry_name, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+          [username, level || null, distanceWalked || 0, caught || 0, stopVisited || null, totalXp || 0, entryName || null, insertDate]
         );
         statId = statResult.insertId;
       }
@@ -117,7 +119,7 @@ module.exports = function (app, db) {
   app.put('/update-data/:id', requireAuth, async (req, res) => {
     try {
       const statId = req.params.id;
-      const { username, level, distanceWalked, caught, stopVisited, totalXp, entryName } = req.body;
+      const { username, level, distanceWalked, caught, stopVisited, totalXp, entryName, createdAt } = req.body;
       
       // 1. Verify ownership of the existing stat
       const [statRows] = await db.execute('SELECT username FROM stats WHERE id = ?', [statId]);
@@ -137,10 +139,17 @@ module.exports = function (app, db) {
         }
       }
 
-      await db.execute(
-        'UPDATE stats SET username = ?, level = ?, distance_walked = ?, caught = ?, stop_visited = ?, total_xp = ?, entry_name = ? WHERE id = ?',
-        [username, level || null, distanceWalked || 0, caught || 0, stopVisited || null, totalXp || 0, entryName || null, statId]
-      );
+      if (createdAt) {
+        await db.execute(
+          'UPDATE stats SET username = ?, level = ?, distance_walked = ?, caught = ?, stop_visited = ?, total_xp = ?, entry_name = ?, created_at = ? WHERE id = ?',
+          [username, level || null, distanceWalked || 0, caught || 0, stopVisited || null, totalXp || 0, entryName || null, new Date(createdAt), statId]
+        );
+      } else {
+        await db.execute(
+          'UPDATE stats SET username = ?, level = ?, distance_walked = ?, caught = ?, stop_visited = ?, total_xp = ?, entry_name = ? WHERE id = ?',
+          [username, level || null, distanceWalked || 0, caught || 0, stopVisited || null, totalXp || 0, entryName || null, statId]
+        );
+      }
 
       res.json({ success: true });
     } catch (err) {

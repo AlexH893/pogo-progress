@@ -16,6 +16,7 @@ export class LogbookComponent implements OnInit {
   editData: any = {};
   isLoading = true;
   user$ = this.authService.user$;
+  showUploadedDate: boolean = false;
 
   constructor(private http: HttpClient, private authService: AuthService) {}
 

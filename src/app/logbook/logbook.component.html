@@ -16,10 +16,17 @@
   </div>
 
   <div class="table-responsive" *ngIf="!isLoading">
+    <div class="table-controls" style="margin-bottom: 10px; display: flex; justify-content: flex-end;">
+      <label class="toggle-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text-color);">
+        <input type="checkbox" [(ngModel)]="showUploadedDate" style="accent-color: var(--primary-color);"> 
+        Show Uploaded Date
+      </label>
+    </div>
     <table class="logbook-table">
       <thead>
         <tr>
-          <th>Date</th>
+          <th>Screenshot Date</th>
+          <th *ngIf="showUploadedDate">Uploaded Date</th>
           <th>User</th>
           <th>Label</th>
           <th>Level</th>
@@ -35,6 +42,7 @@
           <!-- View Mode -->
           <ng-container *ngIf="editingRowId !== row.id">
             <td>{{ formatDate(row.created_at) }}</td>
+            <td *ngIf="showUploadedDate">{{ row.uploaded_at ? formatDate(row.uploaded_at) : '—' }}</td>
             <td>{{ row.username || '—' }}</td>
             <td>{{ row.entry_name || '—' }}</td>
             <td>{{ row.level || '—' }}</td>
@@ -57,6 +65,7 @@
           <!-- Edit Mode -->
           <ng-container *ngIf="editingRowId === row.id">
             <td>{{ formatDate(row.created_at) }}</td>
+            <td *ngIf="showUploadedDate">{{ row.uploaded_at ? formatDate(row.uploaded_at) : '—' }}</td>
             <td><input type="text" [(ngModel)]="editData.username" class="edit-input" /></td>
             <td><input type="text" [(ngModel)]="editData.entry_name" class="edit-input" /></td>
             <td><input type="number" [(ngModel)]="editData.level" class="edit-input" /></td>

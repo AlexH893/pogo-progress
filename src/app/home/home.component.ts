@@ -12,6 +12,7 @@ import {
 import { FunFactService } from '../services/fun-fact.service';
 import { getApiUrl } from '../config';
 import { AuthService } from '../services/auth.service';
+import exifr from 'exifr';
 
 type PageState = 'idle' | 'processing' | 'success' | 'error';
 
@@ -42,8 +43,12 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   funFact: string | null = null;
   allFunFacts: string[] = [];
+  showFunFactsEnabled: boolean = true;
 
-  editingFields: Record<keyof ProfileStats, boolean> = {
+  screenshotDate: Date | null = null;
+  usedFallbackDate: boolean = false;
+
+  editingFields: Record<keyof ProfileStats | 'createdAt', boolean> = {
     level: false,
     distanceWalked: false,
     distanceUnit: false,
@@ -52,6 +57,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     totalXp: false,
     username: false,
     entryName: false,
+    createdAt: false,
   };
 
   private authSub: Subscription | null = null;
@@ -91,7 +97,8 @@ export class HomeComponent implements OnInit, OnDestroy {
         caught: this.stats.pokemonCaught,
         stopVisited: this.stats.pokestopsVisited,
         totalXp: this.stats.totalXp,
-        entryName: this.stats.entryName
+        entryName: this.stats.entryName,
+        createdAt: this.screenshotDate ? this.screenshotDate.toISOString() : undefined
       })
       .subscribe({
         next: (res) => {
@@ -124,6 +131,14 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.errorMessage = msg;
   }
 
+  dismissError(): void {
+    this.errorMessage = '';
+    if (this.state === 'error') {
+      this.state = 'idle';
+      this.revokePreview();
+    }
+  }
+
 
 
   formatDistance(stats: ProfileStats): string {
@@ -144,7 +159,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.showDebug = !this.showDebug;
   }
 
-  toggleEdit(field: keyof ProfileStats): void {
+  toggleEdit(field: keyof ProfileStats | 'createdAt'): void {
     this.editingFields[field] = !this.editingFields[field];
   }
 
@@ -163,6 +178,8 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.allFunFacts = [];
     this.displayStats = null;
     this.isAnimating = false;
+    this.screenshotDate = null;
+    this.usedFallbackDate = false;
     this.editingFields = {
       level: false,
       distanceWalked: false,
@@ -172,6 +189,7 @@ export class HomeComponent implements OnInit, OnDestroy {
       totalXp: false,
       username: false,
       entryName: false,
+      createdAt: false,
     };
 
     if (file.size > 10 * 1024 * 1024) {
@@ -181,6 +199,21 @@ export class HomeComponent implements OnInit, OnDestroy {
     }
 
     this.previewUrl = URL.createObjectURL(file);
+    
+    try {
+      const exifData = await exifr.parse(file, {pick: ['DateTimeOriginal', 'CreateDate']});
+      if (exifData && (exifData.DateTimeOriginal || exifData.CreateDate)) {
+        this.screenshotDate = exifData.DateTimeOriginal || exifData.CreateDate;
+      } else {
+        this.screenshotDate = new Date(file.lastModified);
+        this.usedFallbackDate = true;
+      }
+    } catch (e) {
+      console.warn('Failed to parse EXIF data', e);
+      this.screenshotDate = new Date(file.lastModified);
+      this.usedFallbackDate = true;
+    }
+    
     this.state = 'processing';
 
     try {
@@ -204,8 +237,10 @@ export class HomeComponent implements OnInit, OnDestroy {
               if (this.displayStats) this.displayStats.distanceUnit = userPref.default_unit;
             }
             
+            this.showFunFactsEnabled = !!userPref.show_fun_facts;
+
             // Only generate fun facts if enabled
-            if (userPref.show_fun_facts) {
+            if (this.showFunFactsEnabled) {
               this.generateFunFacts();
             } else {
               this.funFact = null;
@@ -213,14 +248,17 @@ export class HomeComponent implements OnInit, OnDestroy {
             }
           } else {
             // Default behavior if no preferences found
+            this.showFunFactsEnabled = true;
             this.generateFunFacts();
           }
         } catch (err) {
           console.error('Failed to load preferences for stats rendering:', err);
+          this.showFunFactsEnabled = true;
           this.generateFunFacts();
         }
       } else {
         // Guest mode behavior
+        this.showFunFactsEnabled = true;
         this.generateFunFacts();
       }
 
@@ -256,7 +294,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     }
   }
 
-  submitCorrection(field: keyof ProfileStats, value: string): void {
+  submitCorrection(field: keyof ProfileStats | 'createdAt', value: string): void {
     if (!this.stats) return;
 
     if (field === 'username') {
@@ -264,6 +302,13 @@ export class HomeComponent implements OnInit, OnDestroy {
       this.username = value;
     } else if (field === 'entryName') {
       this.stats.entryName = value;
+    } else if (field === 'createdAt' as any) {
+      const parsedDate = new Date(value);
+      if (!Number.isNaN(parsedDate.getTime())) {
+        this.screenshotDate = parsedDate;
+      } else {
+        return;
+      }
     } else if (field === 'distanceWalked') {
       const parsed = parseFloat(value);
       if (!Number.isNaN(parsed)) {
@@ -285,7 +330,13 @@ export class HomeComponent implements OnInit, OnDestroy {
 
     this.editingFields[field] = false;
     this.calculateDiffs(false);
-    this.generateFunFacts();
+    
+    if (this.showFunFactsEnabled) {
+      this.generateFunFacts();
+    } else {
+      this.funFact = null;
+      this.allFunFacts = [];
+    }
 
     const payload = { 
       username: this.username,
@@ -294,7 +345,8 @@ export class HomeComponent implements OnInit, OnDestroy {
       caught: this.stats.pokemonCaught,
       stopVisited: this.stats.pokestopsVisited,
       totalXp: this.stats.totalXp,
-      entryName: this.stats.entryName
+      entryName: this.stats.entryName,
+      createdAt: this.screenshotDate ? this.screenshotDate.toISOString() : undefined
     };
 
     if (!this.authService.getToken()) {
@@ -371,7 +423,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     ) {
       this.statDiffs = diffs;
 
-      const now = Date.now();
+      const now = this.screenshotDate ? this.screenshotDate.getTime() : Date.now();
       const prevDate = new Date(this.previousStats.created_at).getTime();
       this.diffDays = Math.max((now - prevDate) / (1000 * 60 * 60 * 24), 0);
 
@@ -510,6 +562,12 @@ export class HomeComponent implements OnInit, OnDestroy {
       newFact = this.allFunFacts[0];
     }
     this.funFact = newFact;
+  }
+
+  getLocalDatetimeString(d: Date | null): string {
+    if (!d) return '';
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 
 }
