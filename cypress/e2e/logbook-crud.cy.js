@@ -32,6 +32,9 @@ describe('Logbook CRUD Operations', () => {
   });
 
   it('should view the logbook entry', () => {
+    cy.visit('/logbook');
+    cy.wait(5000);
+    cy.get('body').then($body => cy.writeFile('cypress_dom.html', $body.html()));
     cy.contains('td', 'Stillworld').parent('tr').within(() => {
       cy.get('td').eq(1).should('contain', 'Stillworld');
       cy.get('td').eq(2).should('contain', 'Test Entry');

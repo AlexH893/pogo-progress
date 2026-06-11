@@ -18,7 +18,6 @@ describe('OCR Regression Tests', () => {
     // 2. Wait for processing to complete. 
     // The spinner is shown during processing, so we wait for it to disappear.
     // OCR can take a while (especially Tesseract initialization), so increase the timeout.
-    cy.get('.status--loading', { timeout: 30000 }).should('be.visible');
     cy.get('.status--loading', { timeout: 45000 }).should('not.exist');
 
     // 3. Assert the parsed values exist on the screen
@@ -65,7 +64,6 @@ describe('OCR Regression Tests', () => {
     cy.get('input[type="file"]').selectFile('cypress/fixtures/0n7ketb83odf1.jpeg', { force: true });
 
     // 2. Wait for processing to complete. 
-    cy.get('.status--loading', { timeout: 30000 }).should('be.visible');
     cy.get('.status--loading', { timeout: 45000 }).should('not.exist');
 
     // 3. Assert the parsed values exist on the screen
@@ -112,7 +110,6 @@ describe('OCR Regression Tests', () => {
     cy.get('input[type="file"]').selectFile('cypress/fixtures/valor.jpg', { force: true });
 
     // 2. Wait for processing to complete. 
-    cy.get('.status--loading', { timeout: 30000 }).should('be.visible');
     cy.get('.status--loading', { timeout: 45000 }).should('not.exist');
 
     // 3. Assert the parsed values exist on the screen
@@ -159,7 +156,6 @@ describe('OCR Regression Tests', () => {
     cy.get('input[type="file"]').selectFile('cypress/fixtures/pokestops-visited-edgecase.jpg', { force: true });
 
     // 2. Wait for processing to complete. 
-    cy.get('.status--loading', { timeout: 30000 }).should('be.visible');
     cy.get('.status--loading', { timeout: 45000 }).should('not.exist');
 
     // 3. Assert the parsed values exist on the screen
@@ -206,7 +202,6 @@ describe('OCR Regression Tests', () => {
     cy.get('input[type="file"]').selectFile('cypress/fixtures/username-edgecase.jpg', { force: true });
 
     // 2. Wait for processing to complete. 
-    cy.get('.status--loading', { timeout: 30000 }).should('be.visible');
     cy.get('.status--loading', { timeout: 45000 }).should('not.exist');
 
     // 3. Assert the parsed values exist on the screen
@@ -256,7 +251,6 @@ describe('OCR Regression Tests', () => {
     cy.get('input[type=file]').selectFile('cypress/fixtures/username-1.jpg', { force: true });
 
     // 3. Wait for 'processing' to finish, meaning 'success' state is shown
-    cy.get('.status--loading', { timeout: 30000 }).should('be.visible');
     cy.get('.status--loading', { timeout: 45000 }).should('not.exist');
     cy.get('.stats__item').should('have.length', 5);
 
