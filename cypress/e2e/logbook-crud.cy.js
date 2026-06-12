@@ -143,6 +143,24 @@ describe('Logbook CRUD Operations', () => {
     });
   });
 
+  it('should reject malicious string payloads and rollback', () => {
+    cy.intercept('PUT', '**/update-data/*').as('updateData');
+
+    cy.contains('td', 'Stillworld').parent('tr').within(() => {
+      // Click on entryName cell to start inline edit
+      cy.get('td').eq(2).click();
+      
+      // Type malicious string
+      cy.get('input[type="text"]').clear().invoke('val', '<script>alert(1)</script>').trigger('input');
+      cy.get('input[type="text"]').blur();
+    });
+
+    cy.wait('@updateData').its('response.statusCode').should('eq', 400);
+
+    // Should show error toast
+    cy.get('.toast-error', { timeout: 5000 }).should('be.visible').and('contain.text', 'Failed to save edit');
+  });
+
   it('should delete the logbook entry', () => {
     cy.contains('td', 'Stillworld').parent('tr').within(() => {
       cy.get('.delete-btn').click({ force: true });

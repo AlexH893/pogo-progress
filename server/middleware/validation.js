@@ -1,13 +1,13 @@
 const Joi = require('joi');
 
 const statsSchema = Joi.object({
-  username: Joi.string().trim().max(100).required(),
-  level: Joi.number().integer().min(1).max(100).allow(null, ''),
+  username: Joi.string().trim().regex(/^[a-zA-Z0-9_]+$/).message('"username" must only contain alphanumeric characters and underscores').max(100).required(),
+  level: Joi.number().integer().min(1).max(80).allow(null, ''),
   distanceWalked: Joi.number().min(0).max(1000000).allow(null, ''),
   caught: Joi.number().integer().min(0).max(99999999).allow(null, ''),
   stopVisited: Joi.number().integer().min(0).max(99999999).allow(null, ''),
   totalXp: Joi.number().integer().min(0).max(2000000000).allow(null, ''),
-  entryName: Joi.string().trim().max(100).allow(null, ''),
+  entryName: Joi.string().trim().regex(/^[a-zA-Z0-9\s\-_!?.,()]+$/).message('"entryName" must only contain standard text characters').max(100).allow(null, ''),
   createdAt: Joi.alternatives().try(Joi.date().iso(), Joi.string(), Joi.date()).allow(null, '')
 });
 

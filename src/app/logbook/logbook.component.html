@@ -75,7 +75,7 @@
             </td>
             <td class="editable-cell" (click)="startInlineEdit(row, 'level')">
               <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'level')">{{ row.level || '—' }}</span>
-              <input *ngIf="editingCell?.id === row.id && editingCell?.field === 'level'" type="number" min="1" max="100" [value]="row.level || ''" #inlineInput autofocus (keyup.enter)="inlineInput.blur()" (blur)="saveInlineEdit(row, 'level', inlineInput.value)" (click)="$event.stopPropagation()" (keydown)="preventInvalidChars($event)" class="inline-edit-input" />
+              <input *ngIf="editingCell?.id === row.id && editingCell?.field === 'level'" type="number" min="1" max="80" [value]="row.level || ''" #inlineInput autofocus (keyup.enter)="inlineInput.blur()" (blur)="saveInlineEdit(row, 'level', inlineInput.value)" (click)="$event.stopPropagation()" (keydown)="preventInvalidChars($event)" class="inline-edit-input" />
             </td>
             <td class="editable-cell" (click)="startInlineEdit(row, 'total_xp')">
               <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'total_xp')">{{ row.total_xp ? row.total_xp.toLocaleString() : '—' }}</span>
@@ -111,7 +111,7 @@
             <td *ngIf="showUploadedDate">{{ row.uploaded_at ? formatDate(row.uploaded_at) : '—' }}</td>
             <td><input type="text" [(ngModel)]="editData.username" class="edit-input" /></td>
             <td><input type="text" [(ngModel)]="editData.entry_name" class="edit-input" /></td>
-            <td><input type="number" [(ngModel)]="editData.level" min="1" max="100" (keydown)="preventInvalidChars($event)" class="edit-input" /></td>
+            <td><input type="number" [(ngModel)]="editData.level" min="1" max="80" (keydown)="preventInvalidChars($event)" class="edit-input" /></td>
             <td><input type="number" [(ngModel)]="editData.total_xp" min="0" max="2000000000" (keydown)="preventInvalidChars($event)" class="edit-input" /></td>
             <td><input type="number" [(ngModel)]="editData.distance_walked" min="0" max="1000000" step="0.1" (keydown)="preventInvalidChars($event, true)" class="edit-input" /></td>
             <td><input type="number" [(ngModel)]="editData.caught" min="0" max="99999999" (keydown)="preventInvalidChars($event)" class="edit-input" /></td>
