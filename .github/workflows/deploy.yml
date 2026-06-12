@@ -47,8 +47,8 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # This matches your default outputPath in angular.json
-          path: 'dist/pogo-progress'
+          # In Angular 17 with SSR, the frontend build goes to the 'browser' subfolder
+          path: 'dist/pogo-progress/browser'
 
       - name: Deploy to GitHub Pages
         id: deployment
