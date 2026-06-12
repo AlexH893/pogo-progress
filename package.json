@@ -6,6 +6,8 @@
     "ng:start": "ng serve --host 127.0.0.1",
     "server": "node ./server/app.js",
     "start": "concurrently \"npm run ng:start\" \"npm run server\"",
+    "render-build": "npm ci && npm run build:ssr",
+    "render-start": "npm run server",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
