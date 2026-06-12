@@ -11,6 +11,28 @@
     <span class="loading-text">Loading entries...</span>
   </div>
 
+  <div *ngIf="!isLoading && velocityStats" class="velocity-section">
+    <h3 class="velocity-title">{{ velocityLabel }}</h3>
+    <div class="velocity-cards">
+      <div class="velocity-card" *ngIf="velocityStats.caught !== null">
+        <span class="velocity-value">+{{ velocityStats.caught | number }}</span>
+        <span class="velocity-label">Pokémon Caught</span>
+      </div>
+      <div class="velocity-card" *ngIf="velocityStats.stop_visited !== null">
+        <span class="velocity-value">+{{ velocityStats.stop_visited | number }}</span>
+        <span class="velocity-label">PokéStops Spun</span>
+      </div>
+      <div class="velocity-card" *ngIf="velocityStats.total_xp !== null">
+        <span class="velocity-value">+{{ velocityStats.total_xp | number }}</span>
+        <span class="velocity-label">XP Gained</span>
+      </div>
+      <div class="velocity-card" *ngIf="velocityStats.distance_walked !== null">
+        <span class="velocity-value">+{{ getDisplayDistance(velocityStats.distance_walked, velocityStats.default_unit) }}</span>
+        <span class="velocity-label">Distance Walked</span>
+      </div>
+    </div>
+  </div>
+
   <div *ngIf="!isLoading && chartData.length > 0" class="logbook-chart-section">
     <app-progress-chart [userHistory]="chartData" [username]="primaryTrainer"></app-progress-chart>
   </div>

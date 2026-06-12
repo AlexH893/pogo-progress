@@ -18,6 +18,8 @@ export class LogbookComponent implements OnInit {
   isLoading = true;
   user$ = this.authService.user$;
   showUploadedDate: boolean = false;
+  velocityStats: any = null;
+  velocityLabel: string = '';
 
   @ViewChild('deleteConfirmDialog') deleteConfirmDialog!: ElementRef<HTMLDialogElement>;
   pendingDeleteId: number | null = null;
@@ -52,10 +54,61 @@ export class LogbookComponent implements OnInit {
       
       this.chartData = [...this.stats]
         .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        
+      this.calculateVelocity();
     } else {
       this.chartData = [];
       this.primaryTrainer = '';
+      this.velocityStats = null;
     }
+  }
+
+  calculateVelocity(): void {
+    if (!this.stats || this.stats.length < 2) {
+      this.velocityStats = null;
+      return;
+    }
+
+    // this.stats is sorted by created_at DESC (newest first)
+    const latest = this.stats[0];
+    const latestTime = new Date(latest.created_at).getTime();
+    
+    // Target 7 days ago
+    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+    const targetTime = latestTime - sevenDaysMs;
+    
+    let bestEntry = this.stats[1];
+    let minDiff = Math.abs(new Date(bestEntry.created_at).getTime() - targetTime);
+    
+    for (let i = 2; i < this.stats.length; i++) {
+      const entryTime = new Date(this.stats[i].created_at).getTime();
+      const diff = Math.abs(entryTime - targetTime);
+      if (diff < minDiff) {
+        minDiff = diff;
+        bestEntry = this.stats[i];
+      }
+    }
+    
+    // If the best match is within 2 days of the 7-day target, call it "Past 7 Days"
+    // Otherwise just use the immediate previous upload
+    const twoDaysMs = 2 * 24 * 60 * 60 * 1000;
+    
+    if (minDiff <= twoDaysMs) {
+      this.velocityLabel = 'Past 7 Days';
+    } else {
+      // Fallback to previous upload
+      bestEntry = this.stats[1];
+      const daysSince = Math.max(1, Math.round((latestTime - new Date(bestEntry.created_at).getTime()) / (1000 * 60 * 60 * 24)));
+      this.velocityLabel = `Since Last Upload (${daysSince} day${daysSince === 1 ? '' : 's'} ago)`;
+    }
+    
+    this.velocityStats = {
+      caught: (latest.caught !== null && bestEntry.caught !== null) ? latest.caught - bestEntry.caught : null,
+      total_xp: (latest.total_xp !== null && bestEntry.total_xp !== null) ? latest.total_xp - bestEntry.total_xp : null,
+      distance_walked: (latest.distance_walked !== null && bestEntry.distance_walked !== null) ? (latest.distance_walked - bestEntry.distance_walked) : null,
+      stop_visited: (latest.stop_visited !== null && bestEntry.stop_visited !== null) ? latest.stop_visited - bestEntry.stop_visited : null,
+      default_unit: latest.default_unit || 'km'
+    };
   }
 
   startEdit(row: any): void {
