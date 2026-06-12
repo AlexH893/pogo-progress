@@ -86,10 +86,19 @@ describe('LogbookComponent', () => {
     expect(component.editingRowId).toBeNull();
   });
 
-  it('should delete entry if confirmed', () => {
-    spyOn(window, 'confirm').and.returnValue(true);
+  it('should delete entry if confirmed via dialog', () => {
+    component.deleteConfirmDialog = {
+      nativeElement: {
+        showModal: jasmine.createSpy('showModal'),
+        close: jasmine.createSpy('close')
+      }
+    } as any;
 
-    component.deleteEntry(1);
+    component.openDeleteDialog(1);
+    expect(component.pendingDeleteId).toBe(1);
+    expect(component.deleteConfirmDialog.nativeElement.showModal).toHaveBeenCalled();
+
+    component.confirmDelete();
 
     const deleteReq = httpMock.expectOne(`${getApiUrl()}/delete-data/1`);
     expect(deleteReq.request.method).toBe('DELETE');
@@ -98,13 +107,63 @@ describe('LogbookComponent', () => {
     // It should fetch data again after delete
     const getReq = httpMock.expectOne(`${getApiUrl()}/get-data`);
     getReq.flush([]);
+
+    expect(component.pendingDeleteId).toBeNull();
+    expect(component.deleteConfirmDialog.nativeElement.close).toHaveBeenCalled();
   });
 
-  it('should not delete entry if not confirmed', () => {
-    spyOn(window, 'confirm').and.returnValue(false);
+  it('should not delete entry if dialog is closed', () => {
+    component.deleteConfirmDialog = {
+      nativeElement: {
+        showModal: jasmine.createSpy('showModal'),
+        close: jasmine.createSpy('close')
+      }
+    } as any;
 
-    component.deleteEntry(1);
+    component.openDeleteDialog(1);
+    expect(component.pendingDeleteId).toBe(1);
 
+    component.closeDeleteDialog();
+    expect(component.pendingDeleteId).toBeNull();
+    expect(component.deleteConfirmDialog.nativeElement.close).toHaveBeenCalled();
+
+    component.confirmDelete();
     httpMock.expectNone(`${getApiUrl()}/delete-data/1`);
+  });
+
+  describe('calculateVelocity', () => {
+    it('should calculate velocity for an exact 7 day difference', () => {
+      component.stats = [
+        { created_at: new Date('2023-10-08T10:00:00Z').toISOString(), caught: 200, total_xp: 2000, distance_walked: 20, stop_visited: 100, default_unit: 'km' },
+        { created_at: new Date('2023-10-01T10:00:00Z').toISOString(), caught: 100, total_xp: 1000, distance_walked: 10, stop_visited: 50, default_unit: 'km' }
+      ];
+      component.calculateVelocity();
+      expect(component.velocityLabel).toBe('Past 7 Days');
+      expect(component.velocityStats).toEqual({
+        caught: 100,
+        total_xp: 1000,
+        distance_walked: 10,
+        stop_visited: 50,
+        default_unit: 'km'
+      });
+    });
+
+    it('should fallback to since last upload if no 7 day match is found (e.g. 1 day ago)', () => {
+      component.stats = [
+        { created_at: new Date('2023-10-08T10:00:00Z').toISOString(), caught: 200, total_xp: 2000, distance_walked: 20, stop_visited: 100, default_unit: 'km' },
+        { created_at: new Date('2023-10-07T10:00:00Z').toISOString(), caught: 150, total_xp: 1500, distance_walked: 15, stop_visited: 75, default_unit: 'km' }
+      ];
+      component.calculateVelocity();
+      expect(component.velocityLabel).toBe('Since Last Upload (1 day ago)');
+      expect(component.velocityStats.caught).toBe(50);
+    });
+
+    it('should not calculate velocity if less than 2 entries', () => {
+      component.stats = [
+        { created_at: new Date('2023-10-08T10:00:00Z').toISOString(), caught: 200, total_xp: 2000, distance_walked: 20, stop_visited: 100, default_unit: 'km' }
+      ];
+      component.calculateVelocity();
+      expect(component.velocityStats).toBeNull();
+    });
   });
 });
