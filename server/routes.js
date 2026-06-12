@@ -1,7 +1,7 @@
 const { OAuth2Client } = require('google-auth-library');
 const jwt = require('jsonwebtoken');
 const { requireAuth, optionalAuth, JWT_SECRET } = require('./middleware/auth');
-
+const { validateStats, validatePreferences } = require('./middleware/validation');
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 let client;
 if (CLIENT_ID) {
@@ -53,7 +53,7 @@ module.exports = function (app, db) {
   });
 
   // Posts user's stats to database. Used when the user first uploads a screenshot.
-  app.post('/post-data', optionalAuth, async (req, res) => {
+  app.post('/post-data', optionalAuth, validateStats, async (req, res) => {
     try {
       const { username, level, distanceWalked, caught, stopVisited, totalXp, entryName, createdAt } = req.body;
       if (!username) {
@@ -125,7 +125,7 @@ module.exports = function (app, db) {
   });
 
   // Updates the latest entry for a user if they had to correcta parsed entry
-  app.put('/update-data/:id', requireAuth, async (req, res) => {
+  app.put('/update-data/:id', requireAuth, validateStats, async (req, res) => {
     try {
       const statId = req.params.id;
       const { username, level, distanceWalked, caught, stopVisited, totalXp, entryName, createdAt } = req.body;
@@ -246,7 +246,7 @@ module.exports = function (app, db) {
   });
 
   // Update preferences for a specific trainer profile linked to the current Google account
-  app.put('/user-preferences/:username', requireAuth, async (req, res) => {
+  app.put('/user-preferences/:username', requireAuth, validatePreferences, async (req, res) => {
     try {
       const username = req.params.username;
       const { defaultUnit, showFunFacts, displayTutorial } = req.body;
