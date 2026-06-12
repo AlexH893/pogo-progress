@@ -248,6 +248,11 @@ module.exports = function (app, db) {
     }
   });
 
+  // Keep-alive endpoint to prevent Render spin-down
+  app.get('/api/keep-alive', (req, res) => {
+    res.json({ status: 'alive', time: new Date() });
+  });
+
 
 
   // Settings and Preferences

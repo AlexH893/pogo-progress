@@ -64,4 +64,15 @@ try {
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
+
+  // Keep-alive ping for Render
+  if (process.env.RENDER) {
+    const renderUrl = process.env.RENDER_EXTERNAL_URL || 'https://pogo-progress.onrender.com';
+    console.log(`Starting keep-alive ping for ${renderUrl} every 9 minutes`);
+    setInterval(() => {
+      fetch(`${renderUrl}/api/keep-alive`)
+        .then(res => console.log(`[Keep-Alive] Ping successful at ${new Date().toISOString()}`))
+        .catch(err => console.error(`[Keep-Alive] Ping failed:`, err.message));
+    }, 9 * 60 * 1000); // 9 minutes
+  }
 });
