@@ -143,3 +143,65 @@
   margin-bottom: 2rem;
   min-height: 400px; /* Provide some height for the chart to render properly */
 }
+
+.confirm-dialog {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  background: rgba(30, 30, 30, 0.95);
+  color: #fff;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  margin: auto;
+  
+  &::backdrop {
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+  }
+
+  h3 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    font-size: 1.25rem;
+  }
+
+  p {
+    margin-bottom: 1.5rem;
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1.4;
+  }
+
+  .dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    
+    button {
+      padding: 0.5rem 1rem;
+      border-radius: 0.25rem;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+      
+      &.cancel-btn {
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+        
+        &:hover {
+          background: rgba(255, 255, 255, 0.2);
+        }
+      }
+      
+      &.confirm-delete-btn {
+        background: #ef5350;
+        color: #fff;
+        
+        &:hover {
+          background: #f44336;
+        }
+      }
+    }
+  }
+}

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { getApiUrl } from '../config';
 import { AuthService } from '../services/auth.service';
@@ -18,6 +18,9 @@ export class LogbookComponent implements OnInit {
   isLoading = true;
   user$ = this.authService.user$;
   showUploadedDate: boolean = false;
+
+  @ViewChild('deleteConfirmDialog') deleteConfirmDialog!: ElementRef<HTMLDialogElement>;
+  pendingDeleteId: number | null = null;
 
   constructor(private http: HttpClient, private authService: AuthService) {}
 
@@ -134,11 +137,26 @@ export class LogbookComponent implements OnInit {
     });
   }
 
-  deleteEntry(id: number): void {
-    if (confirm('Are you sure you want to delete this entry? This cannot be undone.')) {
-      this.http.delete(`${getApiUrl()}/delete-data/${id}`).subscribe({
+  openDeleteDialog(id: number): void {
+    this.pendingDeleteId = id;
+    if (this.deleteConfirmDialog) {
+      this.deleteConfirmDialog.nativeElement.showModal();
+    }
+  }
+
+  closeDeleteDialog(): void {
+    this.pendingDeleteId = null;
+    if (this.deleteConfirmDialog) {
+      this.deleteConfirmDialog.nativeElement.close();
+    }
+  }
+
+  confirmDelete(): void {
+    if (this.pendingDeleteId !== null) {
+      this.http.delete(`${getApiUrl()}/delete-data/${this.pendingDeleteId}`).subscribe({
         next: () => {
           this.fetchData();
+          this.closeDeleteDialog();
         },
         error: (err) => console.error('Failed to delete data', err)
       });
