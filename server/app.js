@@ -27,7 +27,9 @@ app.use(helmet({
       "font-src": ["'self'", "https://fonts.gstatic.com"],
       "img-src": ["'self'", "data:", "https://*", "http://*"]
     }
-  }
+  },
+  crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+  referrerPolicy: { policy: "strict-origin-when-cross-origin" }
 }));
 
 app.use(bodyParser.json());
