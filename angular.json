@@ -35,7 +35,8 @@
             "scripts": [],
             "allowedCommonJsDependencies": [
               "tesseract.js",
-              "regenerator-runtime"
+              "regenerator-runtime",
+              "file-saver"
             ]
           },
           "configurations": {

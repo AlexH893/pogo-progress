@@ -19,8 +19,10 @@ app.use(helmet({
     directives: {
       "default-src": ["'self'"],
       "script-src": ["'self'", "https://accounts.google.com", "https://docs.opencv.org", "'unsafe-inline'", "'unsafe-eval'"],
+      "script-src-attr": ["'unsafe-inline'"],
+      "worker-src": ["'self'", "blob:"],
       "frame-src": ["'self'", "https://accounts.google.com"],
-      "connect-src": ["'self'", "https://accounts.google.com", "http://localhost:3000", "https://pogo-progress.onrender.com"],
+      "connect-src": ["'self'", "https://accounts.google.com", "http://localhost:3000", "https://pogo-progress.onrender.com", "data:", "blob:"],
       "style-src": ["'self'", "https://fonts.googleapis.com", "https://accounts.google.com", "'unsafe-inline'"],
       "font-src": ["'self'", "https://fonts.gstatic.com"],
       "img-src": ["'self'", "data:", "https://*", "http://*"]
