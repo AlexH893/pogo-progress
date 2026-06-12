@@ -17,7 +17,7 @@
         "build": {
           "builder": "@angular-devkit/build-angular:browser",
           "options": {
-            "outputPath": "dist/pogo-progress",
+            "outputPath": "dist/pogo-progress/browser",
             "index": "src/index.html",
             "main": "src/main.ts",
             "polyfills": [
@@ -78,13 +78,13 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
             "production": {
-              "browserTarget": "pogo-progress:build:production"
+              "buildTarget": "pogo-progress:build:production"
             },
             "development": {
-              "browserTarget": "pogo-progress:build:development"
+              "buildTarget": "pogo-progress:build:development"
             },
             "development-ct": {
-              "browserTarget": "pogo-progress:build:development-ct"
+              "buildTarget": "pogo-progress:build:development-ct"
             }
           },
           "defaultConfiguration": "development"
@@ -92,7 +92,7 @@
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",
           "options": {
-            "browserTarget": "pogo-progress:build"
+            "buildTarget": "pogo-progress:build"
           }
         },
         "test": {
@@ -163,6 +163,68 @@
               "devServerTarget": "pogo-progress:serve:production"
             }
           }
+        },
+        "server": {
+          "builder": "@angular-devkit/build-angular:server",
+          "options": {
+            "outputPath": "dist/pogo-progress/server",
+            "main": "server.ts",
+            "tsConfig": "tsconfig.server.json",
+            "inlineStyleLanguage": "scss"
+          },
+          "configurations": {
+            "production": {
+              "outputHashing": "media"
+            },
+            "development": {
+              "buildOptimizer": false,
+              "optimization": false,
+              "sourceMap": true,
+              "extractLicenses": false,
+              "vendorChunk": true
+            },
+            "development-ct": {
+              "buildOptimizer": false,
+              "optimization": false,
+              "sourceMap": true,
+              "extractLicenses": false,
+              "vendorChunk": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve-ssr": {
+          "builder": "@angular-devkit/build-angular:ssr-dev-server",
+          "configurations": {
+            "development": {
+              "browserTarget": "pogo-progress:build:development",
+              "serverTarget": "pogo-progress:server:development"
+            },
+            "production": {
+              "browserTarget": "pogo-progress:build:production",
+              "serverTarget": "pogo-progress:server:production"
+            }
+          },
+          "defaultConfiguration": "development"
+        },
+        "prerender": {
+          "builder": "@angular-devkit/build-angular:prerender",
+          "options": {
+            "routes": [
+              "/"
+            ]
+          },
+          "configurations": {
+            "production": {
+              "browserTarget": "pogo-progress:build:production",
+              "serverTarget": "pogo-progress:server:production"
+            },
+            "development": {
+              "browserTarget": "pogo-progress:build:development",
+              "serverTarget": "pogo-progress:server:development"
+            }
+          },
+          "defaultConfiguration": "production"
         }
       }
     }

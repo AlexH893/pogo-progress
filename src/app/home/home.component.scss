@@ -91,6 +91,16 @@
   grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 1rem;
   margin: 0;
+
+  /* View transition for smooth re-ordering or state changes */
+  view-transition-name: stats-grid;
+}
+
+/* Emphasize the Total XP card */
+app-stat-card:nth-child(2) {
+  @media (min-width: 400px) {
+    grid-column: span 2;
+  }
 }
 
 

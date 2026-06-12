@@ -137,11 +137,18 @@
       (shuffleClicked)="shuffleFunFact()">
     </app-fun-fact>
 
-    <app-progress-chart
-      *ngIf="userHistory.length > 0 && username"
-      [userHistory]="userHistory"
-      [username]="username">
-    </app-progress-chart>
+    @if (userHistory.length > 0 && username) {
+      @defer (on viewport) {
+        <app-progress-chart
+          [userHistory]="userHistory"
+          [username]="username">
+        </app-progress-chart>
+      } @placeholder {
+        <div style="height: 300px; display: flex; align-items: center; justify-content: center;">
+          <span class="loading-text">Loading chart...</span>
+        </div>
+      }
+    }
 
     <!-- Guest Mode Prompt -->
     <div *ngIf="state === 'success' && stats && !(authService.user$ | async)" class="guest-prompt glass-card">

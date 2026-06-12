@@ -7,12 +7,21 @@
   --color-danger: #ef5350;
   --color-danger-hover: #ef9a9a;
   
-  --glass-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-  --glass-inner-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
-  --glass-border-radius: 20px;
+  --glass-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%);
+  --glass-border: rgba(255, 255, 255, 0.06);
+  --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  --glass-inner-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.08);
+  --glass-border-radius: 16px;
+
 }
+
+@property --bg-x1 { syntax: '<percentage>'; inherits: false; initial-value: 15%; }
+@property --bg-y1 { syntax: '<percentage>'; inherits: false; initial-value: 50%; }
+@property --bg-x2 { syntax: '<percentage>'; inherits: false; initial-value: 85%; }
+@property --bg-y2 { syntax: '<percentage>'; inherits: false; initial-value: 30%; }
+@property --bg-x3 { syntax: '<percentage>'; inherits: false; initial-value: 50%; }
+@property --bg-y3 { syntax: '<percentage>'; inherits: false; initial-value: 80%; }
+
 
 *,
 *::before,
@@ -35,13 +44,32 @@ body {
   color: var(--color-text-primary);
   background-color: var(--color-base);
   background-image: 
-    radial-gradient(circle at 15% 50%, rgba(129, 199, 132, 0.08) 0%, transparent 50%),
-    radial-gradient(circle at 85% 30%, rgba(100, 181, 246, 0.08) 0%, transparent 50%),
-    radial-gradient(circle at 50% 80%, rgba(129, 199, 132, 0.05) 0%, transparent 50%);
+    radial-gradient(circle at var(--bg-x1, 15%) var(--bg-y1, 50%), rgba(129, 199, 132, 0.07) 0%, transparent 45%),
+    radial-gradient(circle at var(--bg-x2, 85%) var(--bg-y2, 30%), rgba(100, 181, 246, 0.07) 0%, transparent 45%),
+    radial-gradient(circle at var(--bg-x3, 50%) var(--bg-y3, 80%), rgba(129, 199, 132, 0.04) 0%, transparent 45%);
   background-attachment: fixed;
   background-size: cover;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  animation: bg-mesh-drift 30s ease-in-out infinite alternate;
+}
+
+@keyframes bg-mesh-drift {
+  0% {
+    --bg-x1: 15%; --bg-y1: 50%;
+    --bg-x2: 85%; --bg-y2: 30%;
+    --bg-x3: 50%; --bg-y3: 80%;
+  }
+  50% {
+    --bg-x1: 25%; --bg-y1: 40%;
+    --bg-x2: 75%; --bg-y2: 40%;
+    --bg-x3: 60%; --bg-y3: 70%;
+  }
+  100% {
+    --bg-x1: 10%; --bg-y1: 60%;
+    --bg-x2: 90%; --bg-y2: 20%;
+    --bg-x3: 40%; --bg-y3: 90%;
+  }
 }
 
 /* Base scrollbar styling for a native app feel */
@@ -62,19 +90,21 @@ body {
 
 .glass-card {
   background: var(--glass-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(24px) saturate(120%);
+  -webkit-backdrop-filter: blur(24px) saturate(120%);
   border-radius: var(--glass-border-radius);
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow), var(--glass-inner-shadow);
   padding: 1.5rem;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1);
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), var(--glass-inner-shadow);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.1);
   }
 }
+
 
 .tabular-nums {
   font-variant-numeric: tabular-nums;
