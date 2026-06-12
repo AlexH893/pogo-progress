@@ -38,25 +38,10 @@ app.use(cors({
   ]
 }));
 
+const { globalLimiter } = require('./middleware/rateLimiter');
+
 // Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // limit each IP to 100 requests per windowMs
-});
-app.use(limiter);
-
-// Stricter rate limits for specific routes
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === 'production' ? 20 : 1000
-});
-app.use('/auth/', authLimiter);
-
-const postLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === 'production' ? 50 : 1000
-});
-app.use('/post-data', postLimiter);
+app.use(globalLimiter);
 
 // Register routes (pass app & db to avoid circular dependency)
 require('./routes')(app, db);
