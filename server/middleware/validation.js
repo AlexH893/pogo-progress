@@ -2,11 +2,11 @@ const Joi = require('joi');
 
 const statsSchema = Joi.object({
   username: Joi.string().trim().max(100).required(),
-  level: Joi.number().integer().min(1).max(50).allow(null, ''),
-  distanceWalked: Joi.number().min(0).allow(null, ''),
-  caught: Joi.number().integer().min(0).allow(null, ''),
-  stopVisited: Joi.number().integer().min(0).allow(null, ''),
-  totalXp: Joi.number().integer().min(0).allow(null, ''),
+  level: Joi.number().integer().min(1).max(100).allow(null, ''),
+  distanceWalked: Joi.number().min(0).max(1000000).allow(null, ''),
+  caught: Joi.number().integer().min(0).max(99999999).allow(null, ''),
+  stopVisited: Joi.number().integer().min(0).max(99999999).allow(null, ''),
+  totalXp: Joi.number().integer().min(0).max(2000000000).allow(null, ''),
   entryName: Joi.string().trim().max(100).allow(null, ''),
   createdAt: Joi.alternatives().try(Joi.date().iso(), Joi.string(), Joi.date()).allow(null, '')
 });

@@ -3,8 +3,8 @@ describe('Diff/Comparison Flow', () => {
   // two different screenshots for the same username. The second upload
   // should show the "Changes since last upload" diff summary.
 
-  before(() => {
-    // Clean up any leftover test data before running
+  beforeEach(() => {
+    // Clean up any leftover test data before running each test
     cy.request('DELETE', 'http://localhost:3000/cleanup-test-data').then((response) => {
       expect(response.status).to.eq(200);
     });

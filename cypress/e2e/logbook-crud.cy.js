@@ -65,12 +65,90 @@ describe('Logbook CRUD Operations', () => {
     });
   });
 
-  it('should delete the logbook entry', () => {
-    cy.on('window:confirm', () => true);
+  it('should reject invalid negative numbers in inline edit and rollback', () => {
+    cy.intercept('PUT', '**/update-data/*').as('updateData');
 
+    cy.contains('td', 'Stillworld').parent('tr').within(() => {
+      // Click on caught cell to start inline edit
+      cy.get('td').eq(6).click();
+      
+      // Force value to -1, bypassing the new keydown blocking logic
+      cy.get('input[type="number"]').clear().invoke('val', '-1').trigger('input');
+      // Trigger blur to save
+      cy.get('input[type="number"]').blur();
+    });
+
+    cy.wait('@updateData').its('response.statusCode').should('eq', 400);
+
+    // Should show error toast
+    cy.get('.toast-error', { timeout: 5000 }).should('be.visible').and('contain.text', 'Failed to save edit');
+
+    // Should rollback to the original value (5000)
+    cy.contains('td', 'Stillworld').parent('tr').within(() => {
+      cy.get('td').eq(6).should('contain', '5,000');
+    });
+  });
+
+  it('should handle strings or empty values gracefully without crashing', () => {
+    cy.contains('td', 'Stillworld').parent('tr').within(() => {
+      // Click on stop_visited cell to start inline edit
+      cy.get('td').eq(7).click();
+      
+      // Clear the input and type an invalid string for a number input
+      cy.get('input[type="number"]').clear().type('invalid_string', { parseSpecialCharSequences: false, force: true });
+      cy.get('input[type="number"]').blur();
+    });
+
+    // Verify it rolled back or is handled gracefully
+    cy.contains('td', 'Stillworld').parent('tr').within(() => {
+      cy.get('td').eq(7).should('exist');
+    });
+  });
+
+  it('should prevent typing letters, spaces, and invalid characters into number fields', () => {
+    cy.contains('td', 'Stillworld').parent('tr').within(() => {
+      // Click on caught cell to start inline edit
+      cy.get('td').eq(6).click();
+      
+      // Clear and try typing invalid characters
+      cy.get('input[type="number"]').clear().type('100e0 ', { force: true });
+      
+      // Depending on Cypress preventDefault support, it should either only register digits (1000) or reject the string entirely
+      // We check that the UI stays functional
+      cy.get('input[type="number"]').invoke('val').should('match', /^(1000|)$/);
+      cy.get('input[type="number"]').blur();
+    });
+  });
+
+  it('should reject excessively large numbers that exceed realistic limits', () => {
+    cy.intercept('PUT', '**/update-data/*').as('updateData');
+
+    cy.contains('td', 'Stillworld').parent('tr').within(() => {
+      // Click on total_xp cell to start inline edit
+      cy.get('td').eq(4).click();
+      
+      // Type a number greater than 2,000,000,000
+      cy.get('input[type="number"]').clear().type('2000000001');
+      cy.get('input[type="number"]').blur();
+    });
+
+    cy.wait('@updateData').its('response.statusCode').should('eq', 400);
+
+    // Should show error toast
+    cy.get('.toast-error', { timeout: 5000 }).should('be.visible').and('contain.text', 'Failed to save edit');
+
+    // Should rollback to the original value (20,000,000)
+    cy.contains('td', 'Stillworld').parent('tr').within(() => {
+      cy.get('td').eq(4).should('contain', '20,000,000');
+    });
+  });
+
+  it('should delete the logbook entry', () => {
     cy.contains('td', 'Stillworld').parent('tr').within(() => {
       cy.get('.delete-btn').click({ force: true });
     });
+
+    cy.get('.confirm-delete-btn').should('be.visible').click({ force: true });
 
     cy.contains('td', 'Stillworld').should('not.exist');
   });

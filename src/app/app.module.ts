@@ -13,7 +13,9 @@ import { DiffSummaryComponent } from './components/diff-summary/diff-summary.com
 import { StatCardComponent } from './components/stat-card/stat-card.component';
 import { FunFactComponent } from './components/fun-fact/fun-fact.component';
 import { ProgressChartComponent } from './components/progress-chart/progress-chart.component';
+import { ToastComponent } from './components/toast/toast.component';
 import { AuthHttpInterceptor } from './services/auth-http.interceptor';
+import { ToastService } from './services/toast.service';
 
 @NgModule({
   declarations: [
@@ -24,7 +26,8 @@ import { AuthHttpInterceptor } from './services/auth-http.interceptor';
     DiffSummaryComponent,
     StatCardComponent,
     FunFactComponent,
-    ProgressChartComponent
+    ProgressChartComponent,
+    ToastComponent
   ],
   imports: [
     BrowserModule,
@@ -33,7 +36,8 @@ import { AuthHttpInterceptor } from './services/auth-http.interceptor';
     FormsModule
   ],
   providers: [
-    { provide: HTTP_INTERCEPTORS, useClass: AuthHttpInterceptor, multi: true }
+    { provide: HTTP_INTERCEPTORS, useClass: AuthHttpInterceptor, multi: true },
+    ToastService
   ],
   bootstrap: [AppComponent]
 })
