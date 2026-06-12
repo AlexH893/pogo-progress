@@ -2,6 +2,7 @@ import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { getApiUrl } from '../config';
 import { AuthService } from '../services/auth.service';
+import { ToastService } from '../services/toast.service';
 
 @Component({
   selector: 'app-logbook',
@@ -24,7 +25,7 @@ export class LogbookComponent implements OnInit {
   @ViewChild('deleteConfirmDialog') deleteConfirmDialog!: ElementRef<HTMLDialogElement>;
   pendingDeleteId: number | null = null;
 
-  constructor(private http: HttpClient, private authService: AuthService) {}
+  constructor(private http: HttpClient, private authService: AuthService, private toastService: ToastService) {}
 
   ngOnInit(): void {
     this.fetchData();
@@ -139,7 +140,10 @@ export class LogbookComponent implements OnInit {
         this.editingRowId = null;
         this.editData = {};
       },
-      error: (err) => console.error('Failed to update data', err)
+      error: (err) => {
+        console.error('Failed to update data', err);
+        this.toastService.show('Failed to save entry. Please try again.', 'error');
+      }
     });
   }
 
@@ -185,6 +189,7 @@ export class LogbookComponent implements OnInit {
       },
       error: (err) => {
         console.error('Failed to update inline data', err);
+        this.toastService.show('Failed to save edit. Changes reverted.', 'error');
         this.fetchData(); // Rollback on error
       }
     });
@@ -229,5 +234,30 @@ export class LogbookComponent implements OnInit {
       return (numDistance * 0.621371).toLocaleString(undefined, { maximumFractionDigits: 1 }) + ' mi';
     }
     return numDistance.toLocaleString(undefined, { maximumFractionDigits: 1 }) + ' km';
+  }
+
+  preventInvalidChars(event: KeyboardEvent, allowDecimal: boolean = false): void {
+    // Allow navigation and editing keys
+    if (['Backspace', 'Tab', 'Enter', 'Escape', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Delete'].includes(event.key)) {
+      return;
+    }
+    
+    // Ctrl/Cmd + A, C, V, X etc.
+    if (event.ctrlKey || event.metaKey) {
+      return;
+    }
+
+    if (event.key === '.' && allowDecimal) {
+      const input = event.target as HTMLInputElement;
+      if (input.value.includes('.')) {
+        event.preventDefault();
+      }
+      return;
+    }
+
+    // Only allow digits
+    if (!/^[0-9]$/.test(event.key)) {
+      event.preventDefault();
+    }
   }
 }

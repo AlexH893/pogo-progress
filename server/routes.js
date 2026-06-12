@@ -332,15 +332,23 @@ module.exports = function (app, db) {
       return res.status(403).json({ error: 'Not allowed in production' });
     }
     try {
+      // First find all usernames linked to the test user
+      const [userRows] = await db.execute('SELECT username FROM users WHERE google_id = ?', ['cypress_test_user_id']);
+      
       const testUsernames = [
         'Stillworld', 'crosspawz', 'Swagpapa209', 
         'DarkraiPH1111', 'TheSleepySiren1', 'TheSleepySirenl', 
         'RedEliGmz', 'RedEliGm', 'Zaford42', 'CypressTestUser'
       ];
       
-      const placeholders = testUsernames.map(() => '?').join(',');
-      await db.execute(`DELETE FROM stats WHERE username IN (${placeholders})`, testUsernames);
-      await db.execute(`DELETE FROM users WHERE username IN (${placeholders})`, testUsernames);
+      // Combine hardcoded ones with any dynamically linked ones (to clean up OCR typos)
+      const allUsernamesToDelete = [...new Set([...testUsernames, ...userRows.map(r => r.username)])];
+      
+      if (allUsernamesToDelete.length > 0) {
+        const placeholders = allUsernamesToDelete.map(() => '?').join(',');
+        await db.execute(`DELETE FROM stats WHERE username IN (${placeholders})`, allUsernamesToDelete);
+        await db.execute(`DELETE FROM users WHERE username IN (${placeholders})`, allUsernamesToDelete);
+      }
       
       res.json({ success: true });
     } catch (err) {

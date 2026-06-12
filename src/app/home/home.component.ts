@@ -25,6 +25,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   state: PageState = 'idle';
   previewUrl: string | null = null;
   username: string = '';
+  knownTrainerName: string | null = null;
   stats: ProfileStats | null = null;
   displayStats: ProfileStats | null = null;
   isAnimating = false;
@@ -85,6 +86,7 @@ export class HomeComponent implements OnInit, OnDestroy {
           next: (prefs) => {
             if (prefs && prefs.length > 0) {
               const pref = prefs[0];
+              this.knownTrainerName = pref.username;
               this.displayTutorialEnabled = pref.display_tutorial !== 0 && pref.display_tutorial !== false;
             }
           },
@@ -242,9 +244,18 @@ export class HomeComponent implements OnInit, OnDestroy {
       if (this.username && this.authService.getToken()) {
         try {
           const prefs = await this.http.get<any[]>(`${getApiUrl()}/user-preferences`).toPromise();
-          const userPref = prefs?.find(p => p.username === this.username);
+          const userPref = prefs && prefs.length > 0 ? prefs[0] : undefined;
           
           if (userPref) {
+            this.knownTrainerName = userPref.username;
+            // Override OCR typo with the known linked trainer name
+            if (this.knownTrainerName && this.username !== this.knownTrainerName) {
+              console.log(`Overriding OCR username ${this.username} with linked trainer ${this.knownTrainerName}`);
+              this.username = this.knownTrainerName;
+              this.stats.username = this.knownTrainerName;
+              if (this.displayStats) this.displayStats.username = this.knownTrainerName;
+            }
+
             // Apply default unit if OCR didn't catch it
             if (!this.stats.distanceUnit) {
               this.stats.distanceUnit = userPref.default_unit;
