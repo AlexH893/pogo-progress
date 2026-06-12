@@ -63,14 +63,14 @@ module.exports = function (app, db) {
       const insertDate = createdAt ? new Date(createdAt) : new Date();
 
       // Fetch the previous stats before inserting
-      const [prevRows] = await db.execute('SELECT * FROM stats WHERE username = ? AND created_at <= ? ORDER BY created_at DESC LIMIT 1', [username, insertDate]);
+      const [prevRows] = await db.execute('SELECT * FROM stats WHERE username = ? AND created_at <= ? AND is_deleted = 0 ORDER BY created_at DESC LIMIT 1', [username, insertDate]);
       const previousStats = prevRows.length > 0 ? prevRows[0] : null;
       
       // 1. Handle Users Table
-      const [rows] = await db.execute('SELECT id, google_id FROM users WHERE username = ?', [username]);
+      const [rows] = await db.execute('SELECT id, google_id FROM users WHERE username = ? AND is_deleted = 0', [username]);
       
       if (req.user) {
-        const [existingUsers] = await db.execute('SELECT username FROM users WHERE google_id = ?', [req.user.googleId]);
+        const [existingUsers] = await db.execute('SELECT username FROM users WHERE google_id = ? AND is_deleted = 0', [req.user.googleId]);
         if (existingUsers.length > 0 && existingUsers[0].username !== username) {
           return res.status(403).json({ error: 'You can only link one trainer to your account.' });
         }
@@ -102,7 +102,7 @@ module.exports = function (app, db) {
       let statId = null;
       if (distanceWalked !== undefined && caught !== undefined && totalXp !== undefined) {
         // Check if it's the first upload ever
-        const [allStats] = await db.execute('SELECT id FROM stats WHERE username = ? LIMIT 1', [username]);
+        const [allStats] = await db.execute('SELECT id FROM stats WHERE username = ? AND is_deleted = 0 LIMIT 1', [username]);
         const isFirstEverUpload = allStats.length === 0;
 
         const [statResult] = await db.execute(
@@ -131,18 +131,18 @@ module.exports = function (app, db) {
       const { username, level, distanceWalked, caught, stopVisited, totalXp, entryName, createdAt } = req.body;
       
       // 1. Verify ownership of the existing stat
-      const [statRows] = await db.execute('SELECT username FROM stats WHERE id = ?', [statId]);
+      const [statRows] = await db.execute('SELECT username FROM stats WHERE id = ? AND is_deleted = 0', [statId]);
       if (statRows.length === 0) return res.status(404).json({ error: 'Not found' });
       const originalUsername = statRows[0].username;
       
-      const [originalUserRows] = await db.execute('SELECT google_id FROM users WHERE username = ?', [originalUsername]);
+      const [originalUserRows] = await db.execute('SELECT google_id FROM users WHERE username = ? AND is_deleted = 0', [originalUsername]);
       if (originalUserRows.length === 0 || originalUserRows[0].google_id !== req.user.googleId) {
         return res.status(403).json({ error: 'Not authorized to edit this entry.' });
       }
 
       // 2. If the username is being changed, verify ownership of the new username too
       if (username !== originalUsername) {
-        const [newUserRows] = await db.execute('SELECT google_id FROM users WHERE username = ?', [username]);
+        const [newUserRows] = await db.execute('SELECT google_id FROM users WHERE username = ? AND is_deleted = 0', [username]);
         if (newUserRows.length === 0 || newUserRows[0].google_id !== req.user.googleId) {
           return res.status(403).json({ error: 'Not authorized to assign to this trainer.' });
         }
@@ -172,16 +172,16 @@ module.exports = function (app, db) {
     try {
       const statId = req.params.id;
       
-      const [statRows] = await db.execute('SELECT username FROM stats WHERE id = ?', [statId]);
+      const [statRows] = await db.execute('SELECT username FROM stats WHERE id = ? AND is_deleted = 0', [statId]);
       if (statRows.length === 0) return res.status(404).json({ error: 'Not found' });
       const statUsername = statRows[0].username;
       
-      const [userRows] = await db.execute('SELECT google_id FROM users WHERE username = ?', [statUsername]);
+      const [userRows] = await db.execute('SELECT google_id FROM users WHERE username = ? AND is_deleted = 0', [statUsername]);
       if (userRows.length === 0 || userRows[0].google_id !== req.user.googleId) {
         return res.status(403).json({ error: 'Not authorized to delete this entry.' });
       }
 
-      await db.execute('DELETE FROM stats WHERE id = ?', [statId]);
+      await db.execute('UPDATE stats SET is_deleted = 1 WHERE id = ?', [statId]);
       res.json({ success: true });
     } catch (err) {
       console.error(err);
@@ -197,7 +197,7 @@ module.exports = function (app, db) {
         console.log('[get-data] No user found in req');
         return res.json([]);
       }
-      const [rows] = await db.execute('SELECT stats.*, users.google_id, users.default_unit FROM stats LEFT JOIN users ON stats.username = users.username WHERE users.google_id = ? ORDER BY stats.created_at DESC', [req.user.googleId]);
+      const [rows] = await db.execute('SELECT stats.*, users.google_id, users.default_unit FROM stats LEFT JOIN users ON stats.username = users.username WHERE users.google_id = ? AND stats.is_deleted = 0 AND users.is_deleted = 0 ORDER BY stats.created_at DESC', [req.user.googleId]);
       require('fs').appendFileSync('cypress-debug.log', `[get-data] Fetched ${rows.length} rows for google_id: ${req.user.googleId}\n`);
       console.log(`[get-data] Fetched ${rows.length} rows for google_id: ${req.user.googleId}`);
       res.json(rows);
@@ -212,7 +212,7 @@ module.exports = function (app, db) {
     try {
       const username = req.params.username;
       
-      const [userRows] = await db.execute('SELECT google_id FROM users WHERE username = ?', [username]);
+      const [userRows] = await db.execute('SELECT google_id FROM users WHERE username = ? AND is_deleted = 0', [username]);
       if (userRows.length > 0) {
         const userRow = userRows[0];
         if (userRow.google_id) {
@@ -222,7 +222,7 @@ module.exports = function (app, db) {
         }
       }
 
-      const [rows] = await db.execute('SELECT id, username, level, distance_walked, caught, stop_visited, total_xp, entry_name, created_at FROM stats WHERE username = ? ORDER BY created_at ASC', [username]);
+      const [rows] = await db.execute('SELECT id, username, level, distance_walked, caught, stop_visited, total_xp, entry_name, created_at FROM stats WHERE username = ? AND is_deleted = 0 ORDER BY created_at ASC', [username]);
       res.json(rows);
     } catch (err) {
       console.error(err);
@@ -237,7 +237,7 @@ module.exports = function (app, db) {
   // Get linked trainers and preferences for the current logged-in Google account
   app.get('/user-preferences', requireAuth, async (req, res) => {
     try {
-      const [rows] = await db.execute('SELECT username, default_unit, show_fun_facts, display_tutorial FROM users WHERE google_id = ?', [req.user.googleId]);
+      const [rows] = await db.execute('SELECT username, default_unit, show_fun_facts, display_tutorial FROM users WHERE google_id = ? AND is_deleted = 0', [req.user.googleId]);
       res.json(rows);
     } catch (err) {
       console.error(err);
@@ -251,7 +251,7 @@ module.exports = function (app, db) {
       const username = req.params.username;
       const { defaultUnit, showFunFacts, displayTutorial } = req.body;
       
-      const [userRows] = await db.execute('SELECT google_id FROM users WHERE username = ?', [username]);
+      const [userRows] = await db.execute('SELECT google_id FROM users WHERE username = ? AND is_deleted = 0', [username]);
       if (userRows.length === 0 || userRows[0].google_id !== req.user.googleId) {
         return res.status(403).json({ error: 'Not authorized to edit this trainer.' });
       }
@@ -271,14 +271,14 @@ module.exports = function (app, db) {
   // Export all data for trainers linked to the current Google account
   app.get('/export-data', requireAuth, async (req, res) => {
     try {
-      const [userRows] = await db.execute('SELECT username FROM users WHERE google_id = ?', [req.user.googleId]);
+      const [userRows] = await db.execute('SELECT username FROM users WHERE google_id = ? AND is_deleted = 0', [req.user.googleId]);
       if (userRows.length === 0) {
         return res.json([]);
       }
       const usernames = userRows.map(r => r.username);
       const placeholders = usernames.map(() => '?').join(',');
       
-      const [statRows] = await db.execute(`SELECT * FROM stats WHERE username IN (${placeholders}) ORDER BY username ASC, created_at ASC`, usernames);
+      const [statRows] = await db.execute(`SELECT * FROM stats WHERE username IN (${placeholders}) AND is_deleted = 0 ORDER BY username ASC, created_at ASC`, usernames);
       res.json(statRows);
     } catch (err) {
       console.error(err);
@@ -291,7 +291,7 @@ module.exports = function (app, db) {
     try {
       const username = req.params.username;
       
-      const [userRows] = await db.execute('SELECT google_id FROM users WHERE username = ?', [username]);
+      const [userRows] = await db.execute('SELECT google_id FROM users WHERE username = ? AND is_deleted = 0', [username]);
       if (userRows.length === 0 || userRows[0].google_id !== req.user.googleId) {
         return res.status(403).json({ error: 'Not authorized to unlink this trainer.' });
       }
@@ -307,15 +307,15 @@ module.exports = function (app, db) {
   // Delete all data associated with the current Google account
   app.delete('/delete-account', requireAuth, async (req, res) => {
     try {
-      const [userRows] = await db.execute('SELECT username FROM users WHERE google_id = ?', [req.user.googleId]);
+      const [userRows] = await db.execute('SELECT username FROM users WHERE google_id = ? AND is_deleted = 0', [req.user.googleId]);
       
       if (userRows.length > 0) {
         const usernames = userRows.map(r => r.username);
         const placeholders = usernames.map(() => '?').join(',');
         
         // Delete stats first due to foreign key constraints if any (even if implicit)
-        await db.execute(`DELETE FROM stats WHERE username IN (${placeholders})`, usernames);
-        await db.execute(`DELETE FROM users WHERE google_id = ?`, [req.user.googleId]);
+        await db.execute(`UPDATE stats SET is_deleted = 1 WHERE username IN (${placeholders})`, usernames);
+        await db.execute(`UPDATE users SET is_deleted = 1 WHERE google_id = ?`, [req.user.googleId]);
       }
       
       res.json({ success: true });
