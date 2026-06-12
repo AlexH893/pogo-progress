@@ -16,6 +16,7 @@ export class UploadComponent {
   
   @Output() fileDropped = new EventEmitter<File>();
   @Output() error = new EventEmitter<string>();
+  @Output() playDemo = new EventEmitter<void>();
 
   isDragOver = false;
   
@@ -75,5 +76,9 @@ export class UploadComponent {
         this.exampleModal.nativeElement.close();
       }, 300);
     }
+  }
+
+  onPlayDemo(): void {
+    this.playDemo.emit();
   }
 }

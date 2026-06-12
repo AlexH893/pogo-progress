@@ -62,6 +62,13 @@ export class HomeComponent implements OnInit, OnDestroy {
     createdAt: false,
   };
 
+  isDemoActive = false;
+  isDemoClicking = false;
+  isDemoDragging = false;
+  demoCursorX = -100;
+  demoCursorY = -100;
+  private demoTimeoutIds: any[] = [];
+
   private authSub: Subscription | null = null;
 
   constructor(
@@ -100,6 +107,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     if (this.authSub) {
       this.authSub.unsubscribe();
     }
+    this.clearDemoTimeouts();
   }
 
   postStatsToBackend() {
@@ -612,4 +620,125 @@ export class HomeComponent implements OnInit, OnDestroy {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 
+  private clearDemoTimeouts(): void {
+    for (const id of this.demoTimeoutIds) {
+      clearTimeout(id);
+    }
+    this.demoTimeoutIds = [];
+  }
+
+  private async delay(ms: number): Promise<void> {
+    return new Promise(resolve => {
+      const id = setTimeout(() => {
+        resolve();
+      }, ms);
+      this.demoTimeoutIds.push(id);
+    });
+  }
+
+  async runDemo(): Promise<void> {
+    if (this.isDemoActive) return;
+    this.clearDemoTimeouts();
+    this.isDemoActive = true;
+    this.isDemoClicking = false;
+    this.isDemoDragging = false;
+
+    // Start cursor at bottom right
+    this.demoCursorX = window.innerWidth - 50;
+    this.demoCursorY = window.innerHeight - 50;
+    this.cdr.detectChanges();
+
+    // 1. Move to middle of screen
+    await this.delay(100);
+    this.demoCursorX = window.innerWidth / 2;
+    this.demoCursorY = window.innerHeight / 2;
+    await this.delay(800);
+
+    // 2. Attach screenshot (simulate "grab")
+    this.isDemoDragging = true;
+    this.cdr.detectChanges();
+    await this.delay(600); // Pause to show it grabbed the image
+
+    // 3. Move to drop zone
+    const dropZone = document.querySelector('.drop-zone');
+    if (dropZone) {
+      const rect = dropZone.getBoundingClientRect();
+      this.demoCursorX = rect.left + rect.width / 2;
+      this.demoCursorY = rect.top + rect.height / 2;
+    } else {
+      this.demoCursorX = window.innerWidth / 2;
+      this.demoCursorY = 300;
+    }
+    
+    await this.delay(800); // Wait for cursor move
+
+    // 4. Simulate drop
+    this.isDemoClicking = true;
+    await this.delay(200);
+    this.isDemoDragging = false;
+    this.isDemoClicking = false;
+    await this.delay(200);
+
+    // 3. Processing state
+    this.state = 'processing';
+    this.cdr.detectChanges();
+
+    await this.delay(1500); // Fake processing time
+
+    // 4. Success state with mock data
+    this.username = 'DemoTrainer';
+    const mockStats: ProfileStats = {
+      level: 42,
+      totalXp: 45678900,
+      pokemonCaught: 54321,
+      pokestopsVisited: 23456,
+      distanceWalked: 1234.5,
+      distanceUnit: 'km',
+      username: 'DemoTrainer',
+      entryName: 'Demo Data'
+    };
+
+    this.stats = { ...mockStats };
+    this.displayStats = { ...mockStats };
+    this.screenshotDate = new Date();
+    
+    const applySuccessState = () => {
+      this.state = 'success';
+      this.cdr.detectChanges();
+    };
+
+    if ((document as any).startViewTransition) {
+      (document as any).startViewTransition(() => applySuccessState());
+    } else {
+      applySuccessState();
+    }
+
+    this.showFunFactsEnabled = true;
+    this.generateFunFacts();
+
+    // Move cursor to showcase a stat card
+    await this.delay(600);
+    const firstStat = document.querySelector('.dashboard-stat-card');
+    if (firstStat) {
+      const rect = firstStat.getBoundingClientRect();
+      this.demoCursorX = rect.left + rect.width / 2;
+      this.demoCursorY = rect.top + rect.height / 2;
+    }
+
+    // 5. End demo after viewing
+    await this.delay(4000);
+    this.resetDemo();
+  }
+
+  resetDemo(): void {
+    this.isDemoActive = false;
+    this.isDemoDragging = false;
+    this.clearDemoTimeouts();
+    this.state = 'idle';
+    this.stats = null;
+    this.displayStats = null;
+    this.funFact = null;
+    this.allFunFacts = [];
+    this.cdr.detectChanges();
+  }
 }
