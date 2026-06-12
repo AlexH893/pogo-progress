@@ -11,8 +11,9 @@ export class AuthHttpInterceptor implements HttpInterceptor {
   intercept(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
     const token = this.authService.getToken();
     
-    // Check if the request is an API request
-    if (token && request.url.startsWith('http')) {
+    // Check if the request is an API request (relative path or our known backend domains)
+    const isApiUrl = request.url.startsWith('/') || request.url.includes('localhost') || request.url.includes('pogo-progress.onrender.com');
+    if (token && isApiUrl) {
       request = request.clone({
         setHeaders: {
           Authorization: `Bearer ${token}`
