@@ -1,4 +1,5 @@
-import { Injectable, NgZone } from '@angular/core';
+import { Injectable, NgZone, Inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { getApiUrl, getGoogleClientId } from '../config';
@@ -19,20 +20,27 @@ export class AuthService {
   public user$: Observable<AuthUser | null> = this.userSubject.asObservable();
   private initialized = false;
   
-  constructor(private http: HttpClient, private ngZone: NgZone) {
-    this.restoreSession();
+  constructor(
+    private http: HttpClient, 
+    private ngZone: NgZone,
+    @Inject(PLATFORM_ID) private platformId: Object
+  ) {
+    if (isPlatformBrowser(this.platformId)) {
+      this.restoreSession();
 
-    // Allow Cypress to mock auth
-    if ((window as any).Cypress) {
-      (window as any).mockAuth = (user: AuthUser, token: string) => {
-        localStorage.setItem('auth_token', token);
-        localStorage.setItem('auth_user', JSON.stringify(user));
-        this.userSubject.next(user);
-      };
+      // Allow Cypress to mock auth
+      if ((window as any).Cypress) {
+        (window as any).mockAuth = (user: AuthUser, token: string) => {
+          localStorage.setItem('auth_token', token);
+          localStorage.setItem('auth_user', JSON.stringify(user));
+          this.userSubject.next(user);
+        };
+      }
     }
   }
 
   private restoreSession() {
+    if (!isPlatformBrowser(this.platformId)) return;
     const token = localStorage.getItem('auth_token');
     const userStr = localStorage.getItem('auth_user');
     if (token && userStr) {
@@ -54,6 +62,8 @@ export class AuthService {
   }
 
   public renderSignInButton(elementId: string, type: 'standard' | 'icon' = 'standard') {
+    if (!isPlatformBrowser(this.platformId)) return;
+
     if (typeof google === 'undefined') {
       // Retry in 100ms if script hasn't loaded yet
       setTimeout(() => this.renderSignInButton(elementId, type), 100);
@@ -78,6 +88,8 @@ export class AuthService {
   }
 
   public promptSignIn() {
+    if (!isPlatformBrowser(this.platformId)) return;
+
     if (typeof google === 'undefined') {
       setTimeout(() => this.promptSignIn(), 100);
       return;
@@ -101,8 +113,10 @@ export class AuthService {
         credential: response.credential
       }).subscribe({
         next: (res) => {
-          localStorage.setItem('auth_token', res.token);
-          localStorage.setItem('auth_user', JSON.stringify(res.user));
+          if (isPlatformBrowser(this.platformId)) {
+            localStorage.setItem('auth_token', res.token);
+            localStorage.setItem('auth_user', JSON.stringify(res.user));
+          }
           this.userSubject.next(res.user);
         },
         error: (err) => {
@@ -113,12 +127,17 @@ export class AuthService {
   }
 
   public signOut() {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_user');
+    if (isPlatformBrowser(this.platformId)) {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_user');
+    }
     this.userSubject.next(null);
   }
 
   public getToken(): string | null {
-    return localStorage.getItem('auth_token');
+    if (isPlatformBrowser(this.platformId)) {
+      return localStorage.getItem('auth_token');
+    }
+    return null;
   }
 }
