@@ -1,8 +1,12 @@
 import { isDevMode } from '@angular/core';
 
 export const getApiUrl = () => {
-  // If we are running locally, use the local Node.js server
-  if (isDevMode() || window.location.hostname === 'localhost') {
+  if (typeof window !== 'undefined') {
+    if (isDevMode() || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return 'http://localhost:3000';
+    }
+  } else {
+    // During Server-Side Rendering (Node.js environment)
     return 'http://localhost:3000';
   }
   

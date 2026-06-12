@@ -238,7 +238,16 @@ export class HomeComponent implements OnInit, OnDestroy {
       this.stats = result.stats;
       this.displayStats = { ...result.stats };
       this.rawOcrText = result.rawText;
-      this.state = 'success';
+      const applySuccessState = () => {
+        this.state = 'success';
+        this.cdr.detectChanges();
+      };
+
+      if ((document as any).startViewTransition) {
+        (document as any).startViewTransition(() => applySuccessState());
+      } else {
+        applySuccessState();
+      }
       
       // Load user preferences before generating fun facts
       if (this.username && this.authService.getToken()) {

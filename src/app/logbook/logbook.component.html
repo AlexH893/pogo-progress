@@ -34,7 +34,13 @@
   </div>
 
   <div *ngIf="!isLoading && chartData.length > 0" class="logbook-chart-section">
-    <app-progress-chart [userHistory]="chartData" [username]="primaryTrainer"></app-progress-chart>
+    @defer (on viewport) {
+      <app-progress-chart [userHistory]="chartData" [username]="primaryTrainer"></app-progress-chart>
+    } @placeholder {
+      <div style="height: 300px; display: flex; align-items: center; justify-content: center;">
+        <span class="loading-text">Loading chart...</span>
+      </div>
+    }
   </div>
 
   <div class="table-responsive" *ngIf="!isLoading">

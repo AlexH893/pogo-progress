@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const { requireAuth, optionalAuth, JWT_SECRET } = require('./middleware/auth');
 const { validateStats, validatePreferences } = require('./middleware/validation');
 const { authLimiter, actionLimiter } = require('./middleware/rateLimiter');
+const cache = require('./cache');
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 let client;
 if (CLIENT_ID) {
@@ -118,6 +119,8 @@ module.exports = function (app, db) {
         }
       }
 
+      cache.invalidateUser(req.user ? req.user.googleId : null, username);
+
       res.json({ success: true, statId, previousStats });
     } catch (err) {
       console.error(err);
@@ -161,6 +164,8 @@ module.exports = function (app, db) {
         );
       }
 
+      cache.invalidateUser(req.user ? req.user.googleId : null, [username, originalUsername]);
+
       res.json({ success: true });
     } catch (err) {
       console.error(err);
@@ -183,6 +188,9 @@ module.exports = function (app, db) {
       }
 
       await db.execute('UPDATE stats SET is_deleted = 1 WHERE id = ?', [statId]);
+      
+      cache.invalidateUser(req.user ? req.user.googleId : null, statUsername);
+      
       res.json({ success: true });
     } catch (err) {
       console.error(err);
@@ -193,14 +201,17 @@ module.exports = function (app, db) {
   // Fetches stats from the database for the authenticated user
   app.get('/get-data', optionalAuth, async (req, res) => {
     try {
-      require('fs').appendFileSync('cypress-debug.log', `[get-data] req.user: ${JSON.stringify(req.user)}\n`);
       if (!req.user) {
-        console.log('[get-data] No user found in req');
         return res.json([]);
       }
+      
+      const cacheKey = `getData_${req.user.googleId}`;
+      const cached = cache.get(cacheKey);
+      if (cached) return res.json(cached);
+
       const [rows] = await db.execute('SELECT stats.*, users.google_id, users.default_unit FROM stats LEFT JOIN users ON stats.username = users.username WHERE users.google_id = ? AND stats.is_deleted = 0 AND users.is_deleted = 0 ORDER BY stats.created_at DESC', [req.user.googleId]);
-      require('fs').appendFileSync('cypress-debug.log', `[get-data] Fetched ${rows.length} rows for google_id: ${req.user.googleId}\n`);
-      console.log(`[get-data] Fetched ${rows.length} rows for google_id: ${req.user.googleId}`);
+      
+      cache.set(cacheKey, rows);
       res.json(rows);
     } catch (err) {
       console.error(err);
@@ -223,7 +234,13 @@ module.exports = function (app, db) {
         }
       }
 
+      const cacheKey = `getUserStats_${username}_${req.user ? req.user.googleId : 'guest'}`;
+      const cached = cache.get(cacheKey);
+      if (cached) return res.json(cached);
+
       const [rows] = await db.execute('SELECT id, username, level, distance_walked, caught, stop_visited, total_xp, entry_name, created_at FROM stats WHERE username = ? AND is_deleted = 0 ORDER BY created_at ASC', [username]);
+      
+      cache.set(cacheKey, rows);
       res.json(rows);
     } catch (err) {
       console.error(err);

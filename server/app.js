@@ -46,6 +46,17 @@ app.use(globalLimiter);
 // Register routes (pass app & db to avoid circular dependency)
 require('./routes')(app, db);
 
+// SSR Integration
+try {
+  const ssrModule = require('../dist/pogo-progress/server/main.js');
+  if (ssrModule && ssrModule.app) {
+    console.log('Mounting Angular SSR engine...');
+    app.use(ssrModule.app());
+  }
+} catch (err) {
+  console.log('Angular SSR engine not found or failed to load. Serving API only.');
+}
+
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
