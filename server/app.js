@@ -20,7 +20,7 @@ app.use(helmet({
       "connect-src": ["'self'", "https://accounts.google.com", "http://localhost:3000", "https://pogo-progress.onrender.com", "data:", "blob:"],
       "style-src": ["'self'", "https://fonts.googleapis.com", "https://accounts.google.com", "'unsafe-inline'"],
       "font-src": ["'self'", "https://fonts.gstatic.com"],
-      "img-src": ["'self'", "data:", "https://*", "http://*"]
+      "img-src": ["'self'", "data:", "blob:", "https://*", "http://*"]
     }
   },
   crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
