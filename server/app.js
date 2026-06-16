@@ -39,6 +39,10 @@ app.use(cors({
 
 const { globalLimiter } = require('./middleware/rateLimiter');
 
+// Trust Render's reverse proxy so express-rate-limit can read the real
+// client IP from the X-Forwarded-For header without throwing a validation error.
+app.set('trust proxy', 1);
+
 // Rate limiting
 app.use(globalLimiter);
 
