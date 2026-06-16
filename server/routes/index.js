@@ -12,9 +12,4 @@ router.use('/', statsRoutes);
 router.use('/', userRoutes); 
 router.use('/', testRoutes); 
 
-// Keep-alive endpoint
-router.get('/api/keep-alive', (req, res) => {
-  res.json({ status: 'alive', time: new Date() });
-});
-
 module.exports = router;
