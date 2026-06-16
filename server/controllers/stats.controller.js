@@ -1,0 +1,157 @@
+const cache = require('../cache');
+const userRepository = require('../repositories/user.repository');
+const statsRepository = require('../repositories/stats.repository');
+
+exports.postData = async (req, res) => {
+  try {
+    const { username, level, distanceWalked, caught, stopVisited, totalXp, entryName, createdAt } = req.body;
+    if (!username) {
+      return res.status(400).json({ error: 'Username required' });
+    }
+
+    const insertDate = createdAt ? new Date(createdAt) : new Date();
+    const previousStats = await statsRepository.getPreviousStats(username, insertDate);
+    
+    // 1. Handle Users Table
+    const userRows = await userRepository.findByUsername(username);
+    
+    if (req.user) {
+      const existingUsers = await userRepository.findByGoogleId(req.user.googleId);
+      if (existingUsers.length > 0 && existingUsers[0].username !== username) {
+        return res.status(403).json({ error: 'You can only link one trainer to your account.' });
+      }
+    }
+
+    if (userRows.length > 0) {
+      const userRow = userRows[0];
+      if (userRow.google_id) {
+        if (!req.user || userRow.google_id !== req.user.googleId) {
+          return res.status(403).json({ error: 'This trainer is linked to an account. Please log in to upload stats.' });
+        }
+      }
+      if (!userRow.google_id && req.user) {
+        await userRepository.updateUserGoogleId(username, req.user.googleId);
+      } else {
+        await userRepository.updateDateUpdated(username);
+      }
+    } else {
+      await userRepository.createUser(username, req.user ? req.user.googleId : null);
+    }
+
+    // 2. Handle Stats Table
+    let statId = null;
+    if (distanceWalked !== undefined && caught !== undefined && totalXp !== undefined) {
+      const hasStats = await statsRepository.hasStats(username);
+      
+      statId = await statsRepository.insertStat(username, level || null, distanceWalked || 0, caught || 0, stopVisited || null, totalXp || 0, entryName || null, insertDate);
+
+      // Turn off tutorial if this was their first successful upload
+      if (!hasStats) {
+        await userRepository.updateTutorialDisplay(username, false);
+      }
+    }
+
+    cache.invalidateUser(req.user ? req.user.googleId : null, username);
+    res.json({ success: true, statId, previousStats });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Database error' });
+  }
+};
+
+exports.updateData = async (req, res) => {
+  try {
+    const statId = req.params.id;
+    const { username, level, distanceWalked, caught, stopVisited, totalXp, entryName, createdAt } = req.body;
+    
+    const stat = await statsRepository.getStatById(statId);
+    if (!stat) return res.status(404).json({ error: 'Not found' });
+    const originalUsername = stat.username;
+    
+    const originalUserRows = await userRepository.findByUsername(originalUsername);
+    if (originalUserRows.length === 0 || originalUserRows[0].google_id !== req.user.googleId) {
+      return res.status(403).json({ error: 'Not authorized to edit this entry.' });
+    }
+
+    if (username !== originalUsername) {
+      const newUserRows = await userRepository.findByUsername(username);
+      if (newUserRows.length === 0 || newUserRows[0].google_id !== req.user.googleId) {
+        return res.status(403).json({ error: 'Not authorized to assign to this trainer.' });
+      }
+    }
+
+    await statsRepository.updateStat(statId, username, level || null, distanceWalked || 0, caught || 0, stopVisited || null, totalXp || 0, entryName || null, createdAt ? new Date(createdAt) : null);
+
+    cache.invalidateUser(req.user ? req.user.googleId : null, [username, originalUsername]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Database error' });
+  }
+};
+
+exports.deleteData = async (req, res) => {
+  try {
+    const statId = req.params.id;
+    
+    const stat = await statsRepository.getStatById(statId);
+    if (!stat) return res.status(404).json({ error: 'Not found' });
+    const statUsername = stat.username;
+    
+    const userRows = await userRepository.findByUsername(statUsername);
+    if (userRows.length === 0 || userRows[0].google_id !== req.user.googleId) {
+      return res.status(403).json({ error: 'Not authorized to delete this entry.' });
+    }
+
+    await statsRepository.softDeleteStat(statId);
+    cache.invalidateUser(req.user ? req.user.googleId : null, statUsername);
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Database error' });
+  }
+};
+
+exports.getData = async (req, res) => {
+  try {
+    if (!req.user) return res.json([]);
+    
+    const cacheKey = `getData_${req.user.googleId}`;
+    const cached = cache.get(cacheKey);
+    if (cached) return res.json(cached);
+
+    const rows = await statsRepository.getStatsByGoogleId(req.user.googleId);
+    cache.set(cacheKey, rows);
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Database error' });
+  }
+};
+
+exports.getUserStats = async (req, res) => {
+  try {
+    const username = req.params.username;
+    
+    const userRows = await userRepository.findByUsername(username);
+    if (userRows.length > 0) {
+      const userRow = userRows[0];
+      if (userRow.google_id) {
+        if (!req.user || userRow.google_id !== req.user.googleId) {
+          return res.status(403).json({ error: 'Private profile' });
+        }
+      }
+    }
+
+    const cacheKey = `getUserStats_${username}_${req.user ? req.user.googleId : 'guest'}`;
+    const cached = cache.get(cacheKey);
+    if (cached) return res.json(cached);
+
+    const rows = await statsRepository.getStatsByUsername(username);
+    cache.set(cacheKey, rows);
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Database error' });
+  }
+};

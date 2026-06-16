@@ -36,9 +36,9 @@ describe('AuthHttpInterceptor', () => {
   it('should add Authorization header if token exists', () => {
     authServiceSpy.getToken.and.returnValue('mock-token');
 
-    httpClient.get('http://api.example.com/data').subscribe();
+    httpClient.get('http://localhost:3000/data').subscribe();
 
-    const req = httpMock.expectOne('http://api.example.com/data');
+    const req = httpMock.expectOne('http://localhost:3000/data');
     expect(req.request.headers.has('Authorization')).toBeTrue();
     expect(req.request.headers.get('Authorization')).toBe('Bearer mock-token');
     req.flush({});
@@ -47,9 +47,9 @@ describe('AuthHttpInterceptor', () => {
   it('should not add Authorization header if no token', () => {
     authServiceSpy.getToken.and.returnValue(null);
 
-    httpClient.get('http://api.example.com/data').subscribe();
+    httpClient.get('http://localhost:3000/data').subscribe();
 
-    const req = httpMock.expectOne('http://api.example.com/data');
+    const req = httpMock.expectOne('http://localhost:3000/data');
     expect(req.request.headers.has('Authorization')).toBeFalse();
     req.flush({});
   });
@@ -57,13 +57,13 @@ describe('AuthHttpInterceptor', () => {
   it('should call signOut when receiving 401 Unauthorized', () => {
     authServiceSpy.getToken.and.returnValue('mock-token');
 
-    httpClient.get('http://api.example.com/data').subscribe({
+    httpClient.get('http://localhost:3000/data').subscribe({
       error: (err: HttpErrorResponse) => {
         expect(err.status).toBe(401);
       }
     });
 
-    const req = httpMock.expectOne('http://api.example.com/data');
+    const req = httpMock.expectOne('http://localhost:3000/data');
     
     // Simulate a 401 response from the server
     req.flush('Unauthorized', { status: 401, statusText: 'Unauthorized' });
@@ -74,13 +74,13 @@ describe('AuthHttpInterceptor', () => {
   it('should not call signOut for other errors like 500', () => {
     authServiceSpy.getToken.and.returnValue('mock-token');
 
-    httpClient.get('http://api.example.com/data').subscribe({
+    httpClient.get('http://localhost:3000/data').subscribe({
       error: (err: HttpErrorResponse) => {
         expect(err.status).toBe(500);
       }
     });
 
-    const req = httpMock.expectOne('http://api.example.com/data');
+    const req = httpMock.expectOne('http://localhost:3000/data');
     
     // Simulate a 500 response
     req.flush('Internal Server Error', { status: 500, statusText: 'Server Error' });
