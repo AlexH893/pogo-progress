@@ -166,4 +166,75 @@ describe('LogbookComponent', () => {
       expect(component.velocityStats).toBeNull();
     });
   });
+
+  describe('Comparison Functionality', () => {
+    it('should toggle selection correctly up to 2 items', () => {
+      component.toggleSelection(1);
+      expect(component.isSelected(1)).toBeTrue();
+      expect(component.selectedEntryIds.size).toBe(1);
+
+      component.toggleSelection(2);
+      expect(component.isSelected(2)).toBeTrue();
+      expect(component.selectedEntryIds.size).toBe(2);
+
+      // Should not add a 3rd
+      component.toggleSelection(3);
+      expect(component.isSelected(3)).toBeFalse();
+      expect(component.selectedEntryIds.size).toBe(2);
+
+      // Should remove if already selected
+      component.toggleSelection(1);
+      expect(component.isSelected(1)).toBeFalse();
+      expect(component.selectedEntryIds.size).toBe(1);
+    });
+
+    it('should clear selection', () => {
+      component.toggleSelection(1);
+      component.clearSelection();
+      expect(component.selectedEntryIds.size).toBe(0);
+      expect(component.comparisonResult).toBeNull();
+    });
+
+    it('should compute comparison deltas correctly and open dialog', () => {
+      component.compareDialog = {
+        nativeElement: {
+          showModal: jasmine.createSpy('showModal'),
+          close: jasmine.createSpy('close')
+        }
+      } as any;
+
+      component.stats = [
+        { id: 1, created_at: new Date('2023-10-01T10:00:00Z').toISOString(), total_xp: 1000, distance_walked: 10, caught: 100, stop_visited: 50, level: 20 },
+        { id: 2, created_at: new Date('2023-10-05T10:00:00Z').toISOString(), total_xp: 5000, distance_walked: 50, caught: 500, stop_visited: 250, level: 25 }
+      ];
+
+      component.toggleSelection(1);
+      component.toggleSelection(2);
+      component.compareSelected();
+
+      expect(component.comparisonResult).not.toBeNull();
+      expect(component.comparisonResult.delta.total_xp).toBe(4000);
+      expect(component.comparisonResult.delta.distance_walked).toBe(40);
+      expect(component.comparisonResult.delta.caught).toBe(400);
+      expect(component.comparisonResult.delta.stop_visited).toBe(200);
+      expect(component.comparisonResult.delta.level).toBe(5);
+
+      expect(component.compareDialog.nativeElement.showModal).toHaveBeenCalled();
+    });
+
+    it('should close compare dialog and clear selection', () => {
+      component.compareDialog = {
+        nativeElement: {
+          showModal: jasmine.createSpy('showModal'),
+          close: jasmine.createSpy('close')
+        }
+      } as any;
+
+      component.toggleSelection(1);
+      component.closeCompareDialog();
+
+      expect(component.compareDialog.nativeElement.close).toHaveBeenCalled();
+      expect(component.selectedEntryIds.size).toBe(0);
+    });
+  });
 });

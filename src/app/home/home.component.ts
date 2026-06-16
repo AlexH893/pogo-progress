@@ -185,6 +185,7 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   toggleEdit(field: keyof ProfileStats | 'createdAt'): void {
     this.editingFields[field] = !this.editingFields[field];
+    this.cdr.detectChanges();
   }
 
   async processFile(file: File): Promise<void> {
@@ -358,15 +359,20 @@ export class HomeComponent implements OnInit, OnDestroy {
     } else if (field === 'distanceWalked') {
       const parsed = parseFloat(value);
       if (!Number.isNaN(parsed)) {
-        this.stats.distanceWalked = parsed;
-        if (this.displayStats) this.displayStats.distanceWalked = parsed;
+        this.stats.distanceWalked = Math.max(0, Math.min(1000000, parsed));
+        if (this.displayStats) this.displayStats.distanceWalked = this.stats.distanceWalked;
         if (!this.stats.distanceUnit) this.stats.distanceUnit = 'km'; // default
       } else {
         return;
       }
     } else {
-      const parsed = parseInt(value, 10);
+      let parsed = parseInt(value, 10);
       if (!Number.isNaN(parsed)) {
+        if (field === 'level') parsed = Math.max(1, Math.min(80, parsed));
+        else if (field === 'totalXp') parsed = Math.max(0, Math.min(2000000000, parsed));
+        else if (field === 'pokemonCaught') parsed = Math.max(0, Math.min(99999999, parsed));
+        else if (field === 'pokestopsVisited') parsed = Math.max(0, Math.min(99999999, parsed));
+
         (this.stats as any)[field] = parsed;
         if (this.displayStats) (this.displayStats as any)[field] = parsed;
       } else {

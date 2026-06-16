@@ -1,5 +1,4 @@
 require("dotenv").config();
-const mysql = require("mysql2/promise");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const express = require("express");
@@ -7,11 +6,7 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const app = express();
 
-// Use DATABASE_URL from .env file or environment variables
-const db = mysql.createPool({
-  uri: process.env.DATABASE_URL,
-  timezone: 'Z'
-});
+
 
 // App configurations
 app.use(helmet({
@@ -47,8 +42,8 @@ const { globalLimiter } = require('./middleware/rateLimiter');
 // Rate limiting
 app.use(globalLimiter);
 
-// Register routes (pass app & db to avoid circular dependency)
-require('./routes')(app, db);
+// Register routes
+app.use('/', require('./routes'));
 
 // SSR Integration
 try {

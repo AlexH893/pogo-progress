@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ChangeDetectorRef } from '@angular/core';
 
 @Component({
   selector: 'app-stat-card',
@@ -20,9 +20,12 @@ export class StatCardComponent {
   
   @Output() correctionSubmitted = new EventEmitter<string>();
 
+  constructor(private cdr: ChangeDetectorRef) {}
+
   toggleEdit(): void {
     this.isEditing = !this.isEditing;
     this.isEditingChange.emit(this.isEditing);
+    this.cdr.detectChanges();
   }
 
   submitCorrection(val: string): void {

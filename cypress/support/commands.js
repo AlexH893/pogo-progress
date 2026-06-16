@@ -55,3 +55,32 @@ Cypress.Commands.add('login', () => {
     });
   });
 });
+
+/**
+ * Seeds a fresh, known logbook entry for each test.
+ * Cleans up any existing test data first so tests are fully independent.
+ * Yields the authToken for tests that need to make direct API calls.
+ */
+Cypress.Commands.add('seedLogbookEntry', (overrides = {}) => {
+  cy.request('GET', 'http://localhost:3000/auth/test-token').then((resp) => {
+    const authToken = resp.body.token;
+
+    cy.request('DELETE', 'http://localhost:3000/cleanup-test-data').then(() => {
+      cy.request({
+        method: 'POST',
+        url: 'http://localhost:3000/post-data',
+        headers: { Authorization: `Bearer ${authToken}` },
+        body: {
+          username: 'Stillworld',
+          level: 40,
+          distanceWalked: 1000,
+          caught: 5000,
+          stopVisited: 2000,
+          totalXp: 20000000,
+          entryName: 'Test Entry',
+          ...overrides
+        }
+      });
+    });
+  });
+});

@@ -1,7 +1,7 @@
 <div class="logbook-container glass-card">
   <header class="logbook-header">
     <h2>Data Logbook</h2>
-    <p>View, edit, or delete past entries.</p>
+    <p>View, edit, or delete past entries<ng-container *ngIf="primaryTrainer"> for <strong>{{ primaryTrainer }}</strong></ng-container>.</p>
   </header>
 
   <div *ngIf="isLoading" class="loading-state">
@@ -47,9 +47,9 @@
     <table class="logbook-table">
       <thead>
         <tr>
+          <th class="checkbox-col"></th>
           <th>Screenshot Date</th>
           <th *ngIf="showUploadedDate">Uploaded Date</th>
-          <th>User</th>
           <th>Label</th>
           <th>Level</th>
           <th>Total XP</th>
@@ -60,45 +60,49 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let row of stats">
+        <tr *ngFor="let row of stats" [class.editing-row]="editingRowId === row.id">
           <!-- View Mode -->
           <ng-container *ngIf="editingRowId !== row.id">
+            <td class="checkbox-cell">
+              <label class="checkbox-label" [class.disabled]="!isSelected(row.id) && selectedEntryIds.size >= 2">
+                <input type="checkbox" class="logbook-checkbox"
+                  [checked]="isSelected(row.id)" 
+                  (change)="toggleSelection(row.id)" 
+                  [disabled]="!isSelected(row.id) && selectedEntryIds.size >= 2" />
+              </label>
+            </td>
             <td>{{ formatDate(row.created_at) }}</td>
             <td *ngIf="showUploadedDate">{{ row.uploaded_at ? formatDate(row.uploaded_at) : '—' }}</td>
-            <td class="editable-cell" (click)="startInlineEdit(row, 'username')">
-              <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'username')">{{ row.username || '—' }}</span>
-              <input *ngIf="editingCell?.id === row.id && editingCell?.field === 'username'" type="text" [value]="row.username || ''" #inlineInput autofocus (keyup.enter)="inlineInput.blur()" (blur)="saveInlineEdit(row, 'username', inlineInput.value)" (click)="$event.stopPropagation()" class="inline-edit-input" />
-            </td>
-            <td class="editable-cell" (click)="startInlineEdit(row, 'entry_name')">
+            <td class="editable-cell" (click)="startInlineEdit(row, 'entry_name', $event)">
               <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'entry_name')">{{ row.entry_name || '—' }}</span>
-              <input *ngIf="editingCell?.id === row.id && editingCell?.field === 'entry_name'" type="text" [value]="row.entry_name || ''" #inlineInput autofocus (keyup.enter)="inlineInput.blur()" (blur)="saveInlineEdit(row, 'entry_name', inlineInput.value)" (click)="$event.stopPropagation()" class="inline-edit-input" />
+              <input *ngIf="editingCell?.id === row.id && editingCell?.field === 'entry_name'" type="text" maxlength="30" [value]="row.entry_name || ''" #inlineInput autofocus (keyup.enter)="inlineInput.blur()" (blur)="saveInlineEdit(row, 'entry_name', inlineInput.value)" (click)="$event.stopPropagation()" class="inline-edit-input" />
             </td>
-            <td class="editable-cell" (click)="startInlineEdit(row, 'level')">
+            <td class="editable-cell" (click)="startInlineEdit(row, 'level', $event)">
               <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'level')">{{ row.level || '—' }}</span>
               <input *ngIf="editingCell?.id === row.id && editingCell?.field === 'level'" type="number" min="1" max="80" [value]="row.level || ''" #inlineInput autofocus (keyup.enter)="inlineInput.blur()" (blur)="saveInlineEdit(row, 'level', inlineInput.value)" (click)="$event.stopPropagation()" (keydown)="preventInvalidChars($event)" class="inline-edit-input" />
             </td>
-            <td class="editable-cell" (click)="startInlineEdit(row, 'total_xp')">
+            <td class="editable-cell" (click)="startInlineEdit(row, 'total_xp', $event)">
               <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'total_xp')">{{ row.total_xp ? row.total_xp.toLocaleString() : '—' }}</span>
               <input *ngIf="editingCell?.id === row.id && editingCell?.field === 'total_xp'" type="number" min="0" max="2000000000" [value]="row.total_xp || ''" #inlineInput autofocus (keyup.enter)="inlineInput.blur()" (blur)="saveInlineEdit(row, 'total_xp', inlineInput.value)" (click)="$event.stopPropagation()" (keydown)="preventInvalidChars($event)" class="inline-edit-input" />
             </td>
-            <td class="editable-cell" (click)="startInlineEdit(row, 'distance_walked')">
+            <td class="editable-cell" (click)="startInlineEdit(row, 'distance_walked', $event)">
               <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'distance_walked')">{{ row.distance_walked !== null ? getDisplayDistance(row.distance_walked, row.default_unit) : '—' }}</span>
               <input *ngIf="editingCell?.id === row.id && editingCell?.field === 'distance_walked'" type="number" min="0" max="1000000" step="0.1" [value]="row.distance_walked !== null ? row.distance_walked : ''" #inlineInput autofocus (keyup.enter)="inlineInput.blur()" (blur)="saveInlineEdit(row, 'distance_walked', inlineInput.value)" (click)="$event.stopPropagation()" (keydown)="preventInvalidChars($event, true)" class="inline-edit-input" />
             </td>
-            <td class="editable-cell" (click)="startInlineEdit(row, 'caught')">
+            <td class="editable-cell" (click)="startInlineEdit(row, 'caught', $event)">
               <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'caught')">{{ row.caught !== null ? row.caught.toLocaleString() : '—' }}</span>
               <input *ngIf="editingCell?.id === row.id && editingCell?.field === 'caught'" type="number" min="0" max="99999999" [value]="row.caught !== null ? row.caught : ''" #inlineInput autofocus (keyup.enter)="inlineInput.blur()" (blur)="saveInlineEdit(row, 'caught', inlineInput.value)" (click)="$event.stopPropagation()" (keydown)="preventInvalidChars($event)" class="inline-edit-input" />
             </td>
-            <td class="editable-cell" (click)="startInlineEdit(row, 'stop_visited')">
+            <td class="editable-cell" (click)="startInlineEdit(row, 'stop_visited', $event)">
               <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'stop_visited')">{{ row.stop_visited !== null ? row.stop_visited.toLocaleString() : '—' }}</span>
               <input *ngIf="editingCell?.id === row.id && editingCell?.field === 'stop_visited'" type="number" min="0" max="99999999" [value]="row.stop_visited !== null ? row.stop_visited : ''" #inlineInput autofocus (keyup.enter)="inlineInput.blur()" (blur)="saveInlineEdit(row, 'stop_visited', inlineInput.value)" (click)="$event.stopPropagation()" (keydown)="preventInvalidChars($event)" class="inline-edit-input" />
             </td>
             <td class="actions">
               <ng-container *ngIf="(user$ | async)?.googleId === row.google_id">
-                <button class="action-btn edit-btn" (click)="startEdit(row)" title="Edit">
+                <button class="action-btn edit-btn" (click)="startEdit(row, $event)" title="Edit" [disabled]="selectedEntryIds.size > 0">
                   <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
                 </button>
-                <button class="action-btn delete-btn" (click)="openDeleteDialog(row.id)" title="Delete">
+                <button class="action-btn delete-btn" (click)="openDeleteDialog(row.id)" title="Delete" [disabled]="selectedEntryIds.size > 0">
                   <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                 </button>
               </ng-container>
@@ -107,15 +111,22 @@
 
           <!-- Edit Mode -->
           <ng-container *ngIf="editingRowId === row.id">
+            <td class="checkbox-cell">
+              <label class="checkbox-label" [class.disabled]="!isSelected(row.id) && selectedEntryIds.size >= 2">
+                <input type="checkbox" class="logbook-checkbox"
+                  [checked]="isSelected(row.id)" 
+                  (change)="toggleSelection(row.id)" 
+                  [disabled]="!isSelected(row.id) && selectedEntryIds.size >= 2" />
+              </label>
+            </td>
             <td>{{ formatDate(row.created_at) }}</td>
             <td *ngIf="showUploadedDate">{{ row.uploaded_at ? formatDate(row.uploaded_at) : '—' }}</td>
-            <td><input type="text" [(ngModel)]="editData.username" class="edit-input" /></td>
-            <td><input type="text" [(ngModel)]="editData.entry_name" class="edit-input" /></td>
-            <td><input type="number" [(ngModel)]="editData.level" min="1" max="80" (keydown)="preventInvalidChars($event)" class="edit-input" /></td>
-            <td><input type="number" [(ngModel)]="editData.total_xp" min="0" max="2000000000" (keydown)="preventInvalidChars($event)" class="edit-input" /></td>
-            <td><input type="number" [(ngModel)]="editData.distance_walked" min="0" max="1000000" step="0.1" (keydown)="preventInvalidChars($event, true)" class="edit-input" /></td>
-            <td><input type="number" [(ngModel)]="editData.caught" min="0" max="99999999" (keydown)="preventInvalidChars($event)" class="edit-input" /></td>
-            <td><input type="number" [(ngModel)]="editData.stop_visited" min="0" max="99999999" (keydown)="preventInvalidChars($event)" class="edit-input" /></td>
+            <td><input type="text" [(ngModel)]="editData.entry_name" maxlength="30" class="edit-input" (keyup.enter)="saveEdit()" /></td>
+            <td><input type="number" [(ngModel)]="editData.level" min="1" max="80" (keydown)="preventInvalidChars($event)" class="edit-input" (keyup.enter)="saveEdit()" /></td>
+            <td><input type="number" [(ngModel)]="editData.total_xp" min="0" max="2000000000" (keydown)="preventInvalidChars($event)" class="edit-input" (keyup.enter)="saveEdit()" /></td>
+            <td><input type="number" [(ngModel)]="editData.distance_walked" min="0" max="1000000" step="0.1" (keydown)="preventInvalidChars($event, true)" class="edit-input" (keyup.enter)="saveEdit()" /></td>
+            <td><input type="number" [(ngModel)]="editData.caught" min="0" max="99999999" (keydown)="preventInvalidChars($event)" class="edit-input" (keyup.enter)="saveEdit()" /></td>
+            <td><input type="number" [(ngModel)]="editData.stop_visited" min="0" max="99999999" (keydown)="preventInvalidChars($event)" class="edit-input" (keyup.enter)="saveEdit()" /></td>
             <td class="actions">
               <button class="action-btn save-btn" (click)="saveEdit()" title="Save">
                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
@@ -131,11 +142,83 @@
   </div>
 </div>
 
-<dialog #deleteConfirmDialog class="confirm-dialog glass-card">
+<dialog #deleteConfirmDialog class="confirm-dialog glass-card" (click)="onDialogClick($event, 'delete')">
   <h3>Delete Entry?</h3>
   <p>Are you sure you want to delete this logbook entry?</p>
   <div class="dialog-actions">
     <button class="cancel-btn" (click)="closeDeleteDialog()">Cancel</button>
     <button class="action-btn delete-btn confirm-delete-btn" (click)="confirmDelete()">Delete</button>
+  </div>
+</dialog>
+
+<div class="selection-action-bar glass-card" *ngIf="selectedEntryIds.size === 2">
+  <span class="selection-text">2 entries selected</span>
+  <div class="selection-actions">
+    <button class="action-btn cancel-btn" (click)="clearSelection()">Cancel</button>
+    <button class="action-btn compare-btn" (click)="compareSelected()">Compare</button>
+  </div>
+</div>
+
+<dialog #compareDialog class="compare-dialog glass-card" (click)="onDialogClick($event, 'compare')">
+  <h3>Compare Entries</h3>
+  <div class="compare-content" *ngIf="comparisonResult">
+    <div class="compare-grid">
+      <!-- Headers -->
+      <div class="compare-column older-entry">
+        <div class="entry-label" [style.visibility]="comparisonResult.older.entry_name ? 'visible' : 'hidden'">
+          {{ comparisonResult.older.entry_name || '&nbsp;' }}
+        </div>
+        <h4>{{ formatDate(comparisonResult.older.created_at) }}</h4>
+      </div>
+      <div class="compare-column newer-entry">
+        <div class="entry-label" [style.visibility]="comparisonResult.newer.entry_name ? 'visible' : 'hidden'">
+          {{ comparisonResult.newer.entry_name || '&nbsp;' }}
+        </div>
+        <h4>{{ formatDate(comparisonResult.newer.created_at) }}</h4>
+      </div>
+      <div class="compare-column delta-entry">
+        <div class="entry-label" style="visibility: hidden;">&nbsp;</div>
+        <h4>Difference</h4>
+      </div>
+
+      <!-- Level -->
+      <ng-container *ngIf="comparisonResult.delta.level !== null">
+        <div class="compare-cell">{{ comparisonResult.older.level || '—' }}</div>
+        <div class="compare-cell">{{ comparisonResult.newer.level || '—' }}</div>
+        <div class="compare-cell delta-val positive">+{{ comparisonResult.delta.level }} Level</div>
+      </ng-container>
+
+      <!-- Total XP -->
+      <ng-container *ngIf="comparisonResult.delta.total_xp !== null">
+        <div class="compare-cell">{{ comparisonResult.older.total_xp | number }}</div>
+        <div class="compare-cell">{{ comparisonResult.newer.total_xp | number }}</div>
+        <div class="compare-cell delta-val positive">+{{ comparisonResult.delta.total_xp | number }} XP</div>
+      </ng-container>
+
+      <!-- Distance -->
+      <ng-container *ngIf="comparisonResult.delta.distance_walked !== null">
+        <div class="compare-cell">{{ getDisplayDistance(comparisonResult.older.distance_walked, comparisonResult.older.default_unit) }}</div>
+        <div class="compare-cell">{{ getDisplayDistance(comparisonResult.newer.distance_walked, comparisonResult.newer.default_unit) }}</div>
+        <div class="compare-cell delta-val positive">+{{ getDisplayDistance(comparisonResult.delta.distance_walked, comparisonResult.newer.default_unit) }}</div>
+      </ng-container>
+
+      <!-- Caught -->
+      <ng-container *ngIf="comparisonResult.delta.caught !== null">
+        <div class="compare-cell">{{ comparisonResult.older.caught | number }}</div>
+        <div class="compare-cell">{{ comparisonResult.newer.caught | number }}</div>
+        <div class="compare-cell delta-val positive">+{{ comparisonResult.delta.caught | number }} Caught</div>
+      </ng-container>
+
+      <!-- Stops -->
+      <ng-container *ngIf="comparisonResult.delta.stop_visited !== null">
+        <div class="compare-cell">{{ comparisonResult.older.stop_visited | number }}</div>
+        <div class="compare-cell">{{ comparisonResult.newer.stop_visited | number }}</div>
+        <div class="compare-cell delta-val positive">+{{ comparisonResult.delta.stop_visited | number }} Stops</div>
+      </ng-container>
+
+    </div>
+  </div>
+  <div class="dialog-actions">
+    <button class="action-btn cancel-btn" (click)="closeCompareDialog()">Close</button>
   </div>
 </dialog>

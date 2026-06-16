@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, HostListener } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { getApiUrl } from '../config';
 import { AuthService } from '../services/auth.service';
@@ -22,10 +22,14 @@ export class LogbookComponent implements OnInit {
   velocityStats: any = null;
   velocityLabel: string = '';
 
+  selectedEntryIds: Set<number> = new Set();
+  comparisonResult: any = null;
+
   @ViewChild('deleteConfirmDialog') deleteConfirmDialog!: ElementRef<HTMLDialogElement>;
+  @ViewChild('compareDialog') compareDialog!: ElementRef<HTMLDialogElement>;
   pendingDeleteId: number | null = null;
 
-  constructor(private http: HttpClient, private authService: AuthService, private toastService: ToastService) {}
+  constructor(private http: HttpClient, private authService: AuthService, private toastService: ToastService, private el: ElementRef) {}
 
   ngOnInit(): void {
     this.fetchData();
@@ -112,9 +116,30 @@ export class LogbookComponent implements OnInit {
     };
   }
 
-  startEdit(row: any): void {
+  startEdit(row: any, event?: MouseEvent): void {
+    if (event) event.stopPropagation();
+    if (this.selectedEntryIds.size > 0) return;
+    if (this.editingRowId !== null && this.editingRowId !== row.id) {
+      this.saveEdit();
+    }
     this.editingRowId = row.id;
     this.editData = { ...row };
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    // Don't auto-save while a modal dialog is open — the backdrop click
+    // should only close the dialog, not trigger an unrelated save.
+    const compareOpen = this.compareDialog?.nativeElement?.open;
+    const deleteOpen = this.deleteConfirmDialog?.nativeElement?.open;
+    if (compareOpen || deleteOpen) return;
+
+    if (this.editingRowId !== null) {
+      const editedRowElement = this.el.nativeElement.querySelector('tr.editing-row');
+      if (editedRowElement && !editedRowElement.contains(event.target as Node)) {
+        this.saveEdit();
+      }
+    }
   }
 
   cancelEdit(): void {
@@ -124,6 +149,14 @@ export class LogbookComponent implements OnInit {
 
   saveEdit(): void {
     if (!this.editingRowId) return;
+
+    // Enforce numeric boundaries
+    if (this.editData.level !== null) this.editData.level = Math.max(1, Math.min(80, this.editData.level));
+    if (this.editData.total_xp !== null) this.editData.total_xp = Math.max(0, Math.min(2000000000, this.editData.total_xp));
+    if (this.editData.distance_walked !== null) this.editData.distance_walked = Math.max(0, Math.min(1000000, this.editData.distance_walked));
+    if (this.editData.caught !== null) this.editData.caught = Math.max(0, Math.min(99999999, this.editData.caught));
+    if (this.editData.stop_visited !== null) this.editData.stop_visited = Math.max(0, Math.min(99999999, this.editData.stop_visited));
+
     const payload = {
       username: this.editData.username,
       level: this.editData.level,
@@ -147,7 +180,12 @@ export class LogbookComponent implements OnInit {
     });
   }
 
-  startInlineEdit(row: any, field: string): void {
+  startInlineEdit(row: any, field: string, event?: MouseEvent): void {
+    if (event) event.stopPropagation();
+    if (this.selectedEntryIds.size > 0) return;
+    if (this.editingRowId !== null && this.editingRowId !== row.id) {
+      this.saveEdit();
+    }
     // Prevent starting inline edit if the whole row is already being edited
     if (this.editingRowId === row.id) return;
     this.editingCell = { id: row.id, field };
@@ -160,9 +198,16 @@ export class LogbookComponent implements OnInit {
     if (field === 'distance_walked') {
       parsedValue = parseFloat(value);
       if (isNaN(parsedValue)) parsedValue = null;
+      else parsedValue = Math.max(0, Math.min(1000000, parsedValue));
     } else if (['level', 'total_xp', 'caught', 'stop_visited'].includes(field)) {
       parsedValue = parseInt(value, 10);
       if (isNaN(parsedValue)) parsedValue = null;
+      else {
+        if (field === 'level') parsedValue = Math.max(1, Math.min(80, parsedValue));
+        else if (field === 'total_xp') parsedValue = Math.max(0, Math.min(2000000000, parsedValue));
+        else if (field === 'caught') parsedValue = Math.max(0, Math.min(99999999, parsedValue));
+        else if (field === 'stop_visited') parsedValue = Math.max(0, Math.min(99999999, parsedValue));
+      }
     }
 
     if (row[field] === parsedValue) {
@@ -196,6 +241,7 @@ export class LogbookComponent implements OnInit {
   }
 
   openDeleteDialog(id: number): void {
+    if (this.selectedEntryIds.size > 0) return;
     this.pendingDeleteId = id;
     if (this.deleteConfirmDialog) {
       this.deleteConfirmDialog.nativeElement.showModal();
@@ -218,6 +264,82 @@ export class LogbookComponent implements OnInit {
         },
         error: (err) => console.error('Failed to delete data', err)
       });
+    }
+  }
+
+  isSelected(id: number): boolean {
+    return this.selectedEntryIds.has(id);
+  }
+
+  toggleSelection(id: number): void {
+    if (this.selectedEntryIds.has(id)) {
+      this.selectedEntryIds.delete(id);
+    } else {
+      if (this.selectedEntryIds.size < 2) {
+        this.selectedEntryIds.add(id);
+      }
+    }
+  }
+
+  clearSelection(): void {
+    this.selectedEntryIds.clear();
+    this.comparisonResult = null;
+  }
+
+  compareSelected(): void {
+    if (this.selectedEntryIds.size !== 2) return;
+    
+    const selectedEntries = this.stats.filter(entry => this.selectedEntryIds.has(entry.id));
+    if (selectedEntries.length !== 2) return;
+
+    // Sort older first
+    selectedEntries.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+    const older = selectedEntries[0];
+    const newer = selectedEntries[1];
+
+    this.comparisonResult = {
+      older,
+      newer,
+      delta: {
+        total_xp: (newer.total_xp !== null && older.total_xp !== null) ? newer.total_xp - older.total_xp : null,
+        distance_walked: (newer.distance_walked !== null && older.distance_walked !== null) ? newer.distance_walked - older.distance_walked : null,
+        caught: (newer.caught !== null && older.caught !== null) ? newer.caught - older.caught : null,
+        stop_visited: (newer.stop_visited !== null && older.stop_visited !== null) ? newer.stop_visited - older.stop_visited : null,
+        level: (newer.level !== null && older.level !== null) ? newer.level - older.level : null
+      }
+    };
+
+    if (this.compareDialog) {
+      this.compareDialog.nativeElement.showModal();
+    }
+  }
+
+  closeCompareDialog(): void {
+    if (this.compareDialog) {
+      this.compareDialog.nativeElement.close();
+    }
+    this.clearSelection();
+  }
+
+  onDialogClick(event: MouseEvent, dialogName: 'compare' | 'delete'): void {
+    const dialogElement = dialogName === 'compare' ? this.compareDialog?.nativeElement : this.deleteConfirmDialog?.nativeElement;
+    if (!dialogElement) return;
+
+    const rect = dialogElement.getBoundingClientRect();
+    const isInDialog = (
+      rect.top <= event.clientY &&
+      event.clientY <= rect.top + rect.height &&
+      rect.left <= event.clientX &&
+      event.clientX <= rect.left + rect.width
+    );
+
+    if (!isInDialog) {
+      if (dialogName === 'compare') {
+        this.closeCompareDialog();
+      } else {
+        this.closeDeleteDialog();
+      }
     }
   }
 
