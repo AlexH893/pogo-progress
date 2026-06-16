@@ -5,7 +5,7 @@ export const getApiUrl = () => {
     if (isDevMode() || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
       return 'http://localhost:3000';
     }
-    // In production browser, frontend and backend share the same domain
+    // Frontend and backend are both served from Render (SSR), same origin.
     return '';
   } else {
     // During Server-Side Rendering (Node.js environment)
