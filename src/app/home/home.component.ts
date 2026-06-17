@@ -13,6 +13,7 @@ import { FunFactService } from '../services/fun-fact.service';
 import { getApiUrl } from '../config';
 import { AuthService } from '../services/auth.service';
 import exifr from 'exifr';
+import { levenshtein } from '../utils/levenshtein';
 
 type PageState = 'idle' | 'processing' | 'success' | 'error';
 
@@ -26,9 +27,14 @@ export class HomeComponent implements OnInit, OnDestroy {
   previewUrl: string | null = null;
   username: string = '';
   knownTrainerName: string | null = null;
+  /** True when OCR detected a username that differs by >1 edit from the linked trainer name. */
+  usernameMismatch: boolean = false;
+  /** The raw username OCR read, preserved so the warning can show it. */
+  ocrUsername: string = '';
   stats: ProfileStats | null = null;
   displayStats: ProfileStats | null = null;
   isAnimating = false;
+  isPostingStats = false;
 
   errorMessage = '';
   rawOcrText = '';
@@ -113,6 +119,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   postStatsToBackend() {
     if (!this.username || !this.stats) return;
 
+    this.isPostingStats = true;
     this.http
       .post<{success: boolean, statId?: number, previousStats?: any}>(`${getApiUrl()}/post-data`, { 
         username: this.username,
@@ -126,6 +133,7 @@ export class HomeComponent implements OnInit, OnDestroy {
       })
       .subscribe({
         next: (res) => {
+          this.isPostingStats = false;
           console.log('Posted stats:', res);
           if (res.statId) {
             this.currentStatId = res.statId;
@@ -137,10 +145,16 @@ export class HomeComponent implements OnInit, OnDestroy {
           this.fetchUserHistory(this.username);
         },
         error: (err) => {
+          this.isPostingStats = false;
           console.error('Failed to post stats:', err);
           if (err.status === 403) {
+            // Bug 5: Don't silently swallow — revert to error state so the
+            // user sees exactly why their upload was rejected.
             this.state = 'error';
-            this.errorMessage = err.error?.error || 'This trainer is linked to another account.';
+            this.errorMessage = err.error?.error || 'This trainer name is already linked to a different account.';
+          } else {
+            this.state = 'error';
+            this.errorMessage = 'Network error: Failed to save stats. Please check your connection and try again.';
           }
         },
       });
@@ -266,12 +280,23 @@ export class HomeComponent implements OnInit, OnDestroy {
           
           if (userPref) {
             this.knownTrainerName = userPref.username;
-            // Override OCR typo with the known linked trainer name
+
             if (this.knownTrainerName && this.username !== this.knownTrainerName) {
-              console.log(`Overriding OCR username ${this.username} with linked trainer ${this.knownTrainerName}`);
-              this.username = this.knownTrainerName;
-              this.stats.username = this.knownTrainerName;
-              if (this.displayStats) this.displayStats.username = this.knownTrainerName;
+              const editDist = levenshtein(this.username, this.knownTrainerName);
+
+              if (editDist <= 1) {
+                // Looks like an OCR typo — silently correct
+                console.log(`Correcting OCR typo: "${this.username}" → "${this.knownTrainerName}" (edit distance ${editDist})`);
+                this.username = this.knownTrainerName;
+                this.stats.username = this.knownTrainerName;
+                if (this.displayStats) this.displayStats.username = this.knownTrainerName;
+              } else {
+                // Clearly a different trainer — block and ask the user to confirm
+                console.warn(`Username mismatch: OCR read "${this.username}", linked trainer is "${this.knownTrainerName}" (edit distance ${editDist})`);
+                this.ocrUsername = this.username;
+                this.usernameMismatch = true;
+                this.editingFields.username = true;
+              }
             }
 
             // Apply default unit if OCR didn't catch it
@@ -309,7 +334,7 @@ export class HomeComponent implements OnInit, OnDestroy {
         this.generateFunFacts();
       }
 
-      // Post stats to backend
+      // Post stats to backend (skip if we're waiting for user to confirm a mismatched username)
       if (this.username && this.stats) {
         if (!this.authService.getToken()) {
           // Guest mode: do not save to DB, skip fetch history
@@ -317,7 +342,9 @@ export class HomeComponent implements OnInit, OnDestroy {
           return;
         }
 
-        this.postStatsToBackend();
+        if (!this.usernameMismatch) {
+          this.postStatsToBackend();
+        }
       }
     } catch (err) {
       this.state = 'error';
@@ -344,9 +371,27 @@ export class HomeComponent implements OnInit, OnDestroy {
   submitCorrection(field: keyof ProfileStats | 'createdAt', value: string): void {
     if (!this.stats) return;
 
+    // Fix Race Condition: If the initial background save is still running, 
+    // queue the correction to run shortly after it finishes so we don't duplicate entries.
+    if (this.isPostingStats) {
+      setTimeout(() => this.submitCorrection(field, value), 200);
+      return;
+    }
+
+    if (this.usernameMismatch && field !== 'username') {
+      this.errorMessage = 'Please confirm your trainer name before saving other corrections.';
+      this.editingFields[field] = false;
+      this.cdr.detectChanges();
+      return;
+    }
+
     if (field === 'username') {
-      this.stats.username = value;
-      this.username = value;
+      if (!value.trim()) return; // don't save a blank username
+      this.stats.username = value.trim();
+      this.username = value.trim();
+      // Clear any mismatch warning once the user has confirmed their trainer name
+      this.usernameMismatch = false;
+      this.ocrUsername = '';
     } else if (field === 'entryName') {
       this.stats.entryName = value;
     } else if (field === 'createdAt' as any) {
@@ -402,6 +447,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     };
 
     if (!this.authService.getToken()) {
+      this.errorMessage = 'Please sign in to save your corrections.';
       return; // Guests don't save corrections
     }
 
@@ -415,7 +461,8 @@ export class HomeComponent implements OnInit, OnDestroy {
           },
           error: (err) => {
             console.error(`Failed to update corrected ${field}:`, err);
-            if (err.status === 403) alert(err.error?.error || 'Not authorized.');
+            if (err.status === 403) this.errorMessage = err.error?.error || 'Not authorized.';
+            else this.errorMessage = 'Network error: Failed to save correction. Please try again.';
           },
         });
     } else {
@@ -435,7 +482,8 @@ export class HomeComponent implements OnInit, OnDestroy {
           },
           error: (err) => {
             console.error(`Failed to post corrected ${field}:`, err);
-            if (err.status === 403) alert(err.error?.error || 'Not authorized.');
+            if (err.status === 403) this.errorMessage = err.error?.error || 'Not authorized.';
+            else this.errorMessage = 'Network error: Failed to save correction. Please try again.';
           },
         });
     }

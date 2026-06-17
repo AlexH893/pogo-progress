@@ -55,3 +55,6 @@ aiven-ca.pem
 cypress_diff*
 cypress_diff*.html
 cypress-debug.log
+
+
+*.log*

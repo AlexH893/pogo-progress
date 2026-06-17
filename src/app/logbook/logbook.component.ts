@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ElementRef, HostListener } from '@angular/core';
+import { Component, OnInit, AfterViewInit, ViewChild, ElementRef, HostListener } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { getApiUrl } from '../config';
 import { AuthService } from '../services/auth.service';
@@ -9,7 +9,7 @@ import { ToastService } from '../services/toast.service';
   templateUrl: './logbook.component.html',
   styleUrls: ['./logbook.component.scss']
 })
-export class LogbookComponent implements OnInit {
+export class LogbookComponent implements OnInit, AfterViewInit {
   stats: any[] = [];
   chartData: any[] = [];
   primaryTrainer: string = '';
@@ -22,6 +22,9 @@ export class LogbookComponent implements OnInit {
   velocityStats: any = null;
   velocityLabel: string = '';
 
+  sortField: 'created_at' | 'uploaded_at' = 'created_at';
+  sortDirection: 'asc' | 'desc' = 'desc';
+
   selectedEntryIds: Set<number> = new Set();
   comparisonResult: any = null;
 
@@ -33,6 +36,38 @@ export class LogbookComponent implements OnInit {
 
   ngOnInit(): void {
     this.fetchData();
+  }
+
+  ngAfterViewInit(): void {
+    // Bug 6: The native <dialog> Escape key closes the element without
+    // firing our (click) handler, leaving selectedEntryIds out of sync.
+    // Listen to the 'cancel' event (fired by the browser on Escape) and
+    // route it through our own close handlers so state stays consistent.
+    this.compareDialog?.nativeElement?.addEventListener('cancel', (e: Event) => {
+      e.preventDefault(); // we'll close it ourselves
+      this.closeCompareDialog();
+    });
+    this.deleteConfirmDialog?.nativeElement?.addEventListener('cancel', (e: Event) => {
+      e.preventDefault();
+      this.closeDeleteDialog();
+    });
+  }
+
+  get sortedStats(): any[] {
+    return [...this.stats].sort((a, b) => {
+      const aVal = a[this.sortField] ? new Date(a[this.sortField]).getTime() : 0;
+      const bVal = b[this.sortField] ? new Date(b[this.sortField]).getTime() : 0;
+      return this.sortDirection === 'desc' ? bVal - aVal : aVal - bVal;
+    });
+  }
+
+  sortBy(field: 'created_at' | 'uploaded_at'): void {
+    if (this.sortField === field) {
+      this.sortDirection = this.sortDirection === 'desc' ? 'asc' : 'desc';
+    } else {
+      this.sortField = field;
+      this.sortDirection = 'desc';
+    }
   }
 
   fetchData(): void {
@@ -69,28 +104,29 @@ export class LogbookComponent implements OnInit {
   }
 
   calculateVelocity(): void {
-    if (!this.stats || this.stats.length < 2) {
+    const sorted = this.sortedStats;
+    if (!sorted || sorted.length < 2) {
       this.velocityStats = null;
       return;
     }
 
-    // this.stats is sorted by created_at DESC (newest first)
-    const latest = this.stats[0];
+    // sorted is guaranteed to be ordered by created_at DESC
+    const latest = sorted[0];
     const latestTime = new Date(latest.created_at).getTime();
     
     // Target 7 days ago
     const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
     const targetTime = latestTime - sevenDaysMs;
     
-    let bestEntry = this.stats[1];
+    let bestEntry = sorted[1];
     let minDiff = Math.abs(new Date(bestEntry.created_at).getTime() - targetTime);
     
-    for (let i = 2; i < this.stats.length; i++) {
-      const entryTime = new Date(this.stats[i].created_at).getTime();
+    for (let i = 2; i < sorted.length; i++) {
+      const entryTime = new Date(sorted[i].created_at).getTime();
       const diff = Math.abs(entryTime - targetTime);
       if (diff < minDiff) {
         minDiff = diff;
-        bestEntry = this.stats[i];
+        bestEntry = sorted[i];
       }
     }
     
@@ -102,7 +138,7 @@ export class LogbookComponent implements OnInit {
       this.velocityLabel = 'Past 7 Days';
     } else {
       // Fallback to previous upload
-      bestEntry = this.stats[1];
+      bestEntry = sorted[1];
       const daysSince = Math.max(1, Math.round((latestTime - new Date(bestEntry.created_at).getTime()) / (1000 * 60 * 60 * 24)));
       this.velocityLabel = `Since Last Upload (${daysSince} day${daysSince === 1 ? '' : 's'} ago)`;
     }
@@ -122,6 +158,9 @@ export class LogbookComponent implements OnInit {
     if (this.editingRowId !== null && this.editingRowId !== row.id) {
       this.saveEdit();
     }
+    // Bug 4: Clear any open inline cell before opening the full-row editor
+    // so we never have two simultaneous PUTs to the same endpoint.
+    this.editingCell = null;
     this.editingRowId = row.id;
     this.editData = { ...row };
   }
@@ -149,6 +188,8 @@ export class LogbookComponent implements OnInit {
 
   saveEdit(): void {
     if (!this.editingRowId) return;
+    
+    const savedRowId = this.editingRowId;
 
     // Enforce numeric boundaries
     if (this.editData.level !== null) this.editData.level = Math.max(1, Math.min(80, this.editData.level));
@@ -167,11 +208,14 @@ export class LogbookComponent implements OnInit {
       entryName: this.editData.entry_name
     };
 
-    this.http.put(`${getApiUrl()}/update-data/${this.editingRowId}`, payload).subscribe({
+    this.http.put(`${getApiUrl()}/update-data/${savedRowId}`, payload).subscribe({
       next: () => {
         this.fetchData();
-        this.editingRowId = null;
-        this.editData = {};
+        // Only clear the edit state if the user hasn't already started editing another row
+        if (this.editingRowId === savedRowId) {
+          this.editingRowId = null;
+          this.editData = {};
+        }
       },
       error: (err) => {
         console.error('Failed to update data', err);
@@ -262,7 +306,12 @@ export class LogbookComponent implements OnInit {
           this.fetchData();
           this.closeDeleteDialog();
         },
-        error: (err) => console.error('Failed to delete data', err)
+        // Bug 3: Previously only console.error'd — dialog stayed open with no feedback.
+        error: (err) => {
+          console.error('Failed to delete data', err);
+          this.closeDeleteDialog();
+          this.toastService.show('Failed to delete entry. Please try again.', 'error');
+        }
       });
     }
   }
@@ -344,7 +393,14 @@ export class LogbookComponent implements OnInit {
   }
 
   formatDate(dateStr: string): string {
-    return new Date(dateStr).toLocaleString();
+    // Bare datetime strings from the DB (e.g. "2026-06-16 11:15:43" or
+    // "2026-06-16T11:15:43") have no timezone suffix and are treated as
+    // *local* time by Date(), causing a 6-hour offset for UTC-stored values.
+    // Normalize to UTC by appending 'Z' when there's no timezone indicator.
+    const normalized = /[Zz]|[+-]\d{2}:?\d{2}$/.test(dateStr)
+      ? dateStr
+      : dateStr.replace(' ', 'T') + 'Z';
+    return new Date(normalized).toLocaleString();
   }
 
   getDisplayDistance(distance: any, unit: string | null): string {
