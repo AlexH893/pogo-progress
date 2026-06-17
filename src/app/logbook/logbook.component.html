@@ -15,19 +15,19 @@
     <h3 class="velocity-title">{{ velocityLabel }}</h3>
     <div class="velocity-cards">
       <div class="velocity-card" *ngIf="velocityStats.caught !== null">
-        <span class="velocity-value">+{{ velocityStats.caught | number }}</span>
+        <span class="velocity-value" [class.velocity-negative]="velocityStats.caught < 0">{{ velocityStats.caught >= 0 ? '+' : '' }}{{ velocityStats.caught | number }}</span>
         <span class="velocity-label">Pokémon Caught</span>
       </div>
       <div class="velocity-card" *ngIf="velocityStats.stop_visited !== null">
-        <span class="velocity-value">+{{ velocityStats.stop_visited | number }}</span>
+        <span class="velocity-value" [class.velocity-negative]="velocityStats.stop_visited < 0">{{ velocityStats.stop_visited >= 0 ? '+' : '' }}{{ velocityStats.stop_visited | number }}</span>
         <span class="velocity-label">PokéStops Spun</span>
       </div>
       <div class="velocity-card" *ngIf="velocityStats.total_xp !== null">
-        <span class="velocity-value">+{{ velocityStats.total_xp | number }}</span>
+        <span class="velocity-value" [class.velocity-negative]="velocityStats.total_xp < 0">{{ velocityStats.total_xp >= 0 ? '+' : '' }}{{ velocityStats.total_xp | number }}</span>
         <span class="velocity-label">XP Gained</span>
       </div>
       <div class="velocity-card" *ngIf="velocityStats.distance_walked !== null">
-        <span class="velocity-value">+{{ getDisplayDistance(velocityStats.distance_walked, velocityStats.default_unit) }}</span>
+        <span class="velocity-value" [class.velocity-negative]="velocityStats.distance_walked < 0">{{ velocityStats.distance_walked >= 0 ? '+' : '' }}{{ getDisplayDistance(velocityStats.distance_walked, velocityStats.default_unit) }}</span>
         <span class="velocity-label">Distance Walked</span>
       </div>
     </div>
@@ -48,8 +48,18 @@
       <thead>
         <tr>
           <th class="checkbox-col"></th>
-          <th>Screenshot Date</th>
-          <th *ngIf="showUploadedDate">Uploaded Date</th>
+          <th class="sortable-col" (click)="sortBy('created_at')">
+            Screenshot Date
+            <span class="sort-indicator" [class.active]="sortField === 'created_at'">
+              {{ sortField === 'created_at' ? (sortDirection === 'desc' ? '↓' : '↑') : '↕' }}
+            </span>
+          </th>
+          <th *ngIf="showUploadedDate" class="sortable-col" (click)="sortBy('uploaded_at')">
+            Uploaded Date
+            <span class="sort-indicator" [class.active]="sortField === 'uploaded_at'">
+              {{ sortField === 'uploaded_at' ? (sortDirection === 'desc' ? '↓' : '↑') : '↕' }}
+            </span>
+          </th>
           <th>Label</th>
           <th>Level</th>
           <th>Total XP</th>
@@ -60,7 +70,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let row of stats" [class.editing-row]="editingRowId === row.id">
+        <tr *ngFor="let row of sortedStats" [class.editing-row]="editingRowId === row.id">
           <!-- View Mode -->
           <ng-container *ngIf="editingRowId !== row.id">
             <td class="checkbox-cell">
@@ -187,35 +197,35 @@
       <ng-container *ngIf="comparisonResult.delta.level !== null">
         <div class="compare-cell">{{ comparisonResult.older.level || '—' }}</div>
         <div class="compare-cell">{{ comparisonResult.newer.level || '—' }}</div>
-        <div class="compare-cell delta-val positive">+{{ comparisonResult.delta.level }} Level</div>
+        <div class="compare-cell delta-val" [class.positive]="comparisonResult.delta.level >= 0" [class.negative]="comparisonResult.delta.level < 0">{{ comparisonResult.delta.level >= 0 ? '+' : '' }}{{ comparisonResult.delta.level }} Level</div>
       </ng-container>
 
       <!-- Total XP -->
       <ng-container *ngIf="comparisonResult.delta.total_xp !== null">
         <div class="compare-cell">{{ comparisonResult.older.total_xp | number }}</div>
         <div class="compare-cell">{{ comparisonResult.newer.total_xp | number }}</div>
-        <div class="compare-cell delta-val positive">+{{ comparisonResult.delta.total_xp | number }} XP</div>
+        <div class="compare-cell delta-val" [class.positive]="comparisonResult.delta.total_xp >= 0" [class.negative]="comparisonResult.delta.total_xp < 0">{{ comparisonResult.delta.total_xp >= 0 ? '+' : '' }}{{ comparisonResult.delta.total_xp | number }} XP</div>
       </ng-container>
 
       <!-- Distance -->
       <ng-container *ngIf="comparisonResult.delta.distance_walked !== null">
         <div class="compare-cell">{{ getDisplayDistance(comparisonResult.older.distance_walked, comparisonResult.older.default_unit) }}</div>
         <div class="compare-cell">{{ getDisplayDistance(comparisonResult.newer.distance_walked, comparisonResult.newer.default_unit) }}</div>
-        <div class="compare-cell delta-val positive">+{{ getDisplayDistance(comparisonResult.delta.distance_walked, comparisonResult.newer.default_unit) }}</div>
+        <div class="compare-cell delta-val" [class.positive]="comparisonResult.delta.distance_walked >= 0" [class.negative]="comparisonResult.delta.distance_walked < 0">{{ comparisonResult.delta.distance_walked >= 0 ? '+' : '' }}{{ getDisplayDistance(comparisonResult.delta.distance_walked, comparisonResult.newer.default_unit) }}</div>
       </ng-container>
 
       <!-- Caught -->
       <ng-container *ngIf="comparisonResult.delta.caught !== null">
         <div class="compare-cell">{{ comparisonResult.older.caught | number }}</div>
         <div class="compare-cell">{{ comparisonResult.newer.caught | number }}</div>
-        <div class="compare-cell delta-val positive">+{{ comparisonResult.delta.caught | number }} Caught</div>
+        <div class="compare-cell delta-val" [class.positive]="comparisonResult.delta.caught >= 0" [class.negative]="comparisonResult.delta.caught < 0">{{ comparisonResult.delta.caught >= 0 ? '+' : '' }}{{ comparisonResult.delta.caught | number }} Caught</div>
       </ng-container>
 
       <!-- Stops -->
       <ng-container *ngIf="comparisonResult.delta.stop_visited !== null">
         <div class="compare-cell">{{ comparisonResult.older.stop_visited | number }}</div>
         <div class="compare-cell">{{ comparisonResult.newer.stop_visited | number }}</div>
-        <div class="compare-cell delta-val positive">+{{ comparisonResult.delta.stop_visited | number }} Stops</div>
+        <div class="compare-cell delta-val" [class.positive]="comparisonResult.delta.stop_visited >= 0" [class.negative]="comparisonResult.delta.stop_visited < 0">{{ comparisonResult.delta.stop_visited >= 0 ? '+' : '' }}{{ comparisonResult.delta.stop_visited | number }} Stops</div>
       </ng-container>
 
     </div>

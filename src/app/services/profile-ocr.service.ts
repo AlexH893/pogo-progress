@@ -10,9 +10,15 @@ const MAX_IMAGE_WIDTH = 1200;
   providedIn: 'root',
 })
 export class ProfileOcrService {
+  private activeWorker: any = null;
+
   async extractFromFile(file: File): Promise<ProfileOcrResult> {
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
+        if (this.activeWorker) {
+          this.activeWorker.terminate().catch((e: any) => console.error('Failed to terminate worker on timeout', e));
+          this.activeWorker = null;
+        }
         reject(new OcrTimeoutError('Processing timed out. Your device might be low on memory, or the image is too large. Please try again.'));
       }, 20000);
 
@@ -47,6 +53,7 @@ export class ProfileOcrService {
       corePath: 'assets/tesseract',
       gzip: true,
     });
+    this.activeWorker = worker;
     
     await worker.setParameters({
       tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
@@ -122,7 +129,10 @@ export class ProfileOcrService {
 
       return { stats: mergedStats, rawText: [focusedText, fullBinarizedText, rawText].join('\n') };
     } finally {
-      await worker.terminate();
+      if (this.activeWorker === worker) {
+        await worker.terminate();
+        this.activeWorker = null;
+      }
     }
   }
 

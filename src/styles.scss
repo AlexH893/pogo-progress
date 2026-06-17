@@ -170,6 +170,37 @@ body {
   }
 }
 
+/* Username mismatch warning banner */
+.username-mismatch-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+  background: rgba(255, 170, 0, 0.1);
+  border: 1px solid rgba(255, 170, 0, 0.35);
+  border-radius: 0.5rem;
+  color: #ffcc44;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  animation: fadeInDown 0.25s ease;
+
+  svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+    stroke: #ffcc44;
+  }
+
+  strong {
+    color: #fff;
+  }
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* Global Loading State Animations */
 .pokeball-spinner {
   width: 48px;
