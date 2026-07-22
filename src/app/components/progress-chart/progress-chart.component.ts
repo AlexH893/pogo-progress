@@ -12,7 +12,7 @@ export class ProgressChartComponent implements OnChanges {
 
   @ViewChild('progressChart') progressChartRef!: ElementRef<HTMLCanvasElement>;
   
-  selectedMetric: 'level' | 'distance_walked' | 'caught' | 'stop_visited' | 'total_xp' = 'total_xp';
+  selectedMetric: 'level' | 'distance_walked' | 'caught' | 'stop_visited' | 'total_xp' | 'stardust' = 'total_xp';
   chartInstance: Chart | null = null;
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -21,7 +21,7 @@ export class ProgressChartComponent implements OnChanges {
     }
   }
 
-  setMetric(metric: 'level' | 'distance_walked' | 'caught' | 'stop_visited' | 'total_xp'): void {
+  setMetric(metric: 'level' | 'distance_walked' | 'caught' | 'stop_visited' | 'total_xp' | 'stardust'): void {
     this.selectedMetric = metric;
     this.updateChart();
   }
@@ -45,6 +45,7 @@ export class ProgressChartComponent implements OnChanges {
       case 'caught': labelText = 'Pokémon Caught'; themeColor = '#FFC107'; break; // Yellow
       case 'stop_visited': labelText = 'Pokéstops Visited'; themeColor = '#1A1A1A'; break; // Charcoal
       case 'total_xp': labelText = 'Total XP'; themeColor = '#FF5A00'; break; // Orange
+      case 'stardust': labelText = 'Stardust'; themeColor = '#E040FB'; break; // Vibrant Magenta/Purple
     }
 
     const isLevel = this.selectedMetric === 'level';
