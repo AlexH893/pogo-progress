@@ -7,7 +7,7 @@ import { Component, EventEmitter, Input, Output, ChangeDetectorRef, ElementRef, 
 })
 export class StatCardComponent implements OnInit, OnDestroy {
   @Input() label: string = '';
-  @Input() value: number | null = null;
+  @Input() value: number | null | undefined = null;
   @Input() displayValue: string = '';
   @Input() diff: number | null | undefined = null;
   @Input() formattedDiff: string = '';

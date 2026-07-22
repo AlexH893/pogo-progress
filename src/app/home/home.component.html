@@ -145,7 +145,7 @@
 
         <app-stat-card
           label="Stardust"
-          [value]="stats.stardust"
+          [value]="stats.stardust ?? null"
           [displayValue]="displayStats ? formatCount(displayStats.stardust) : ''"
           [diff]="statDiffs?.stardust"
           [formattedDiff]="formatDiffCount(statDiffs?.stardust)"

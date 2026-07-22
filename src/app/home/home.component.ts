@@ -191,7 +191,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     return `${formatted} ${unit}`;
   }
 
-  formatCount(value: number | null): string {
+  formatCount(value: number | null | undefined): string {
     return (value !== null && value !== undefined) ? value.toLocaleString() : '—';
   }
 
