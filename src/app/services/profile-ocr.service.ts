@@ -76,6 +76,11 @@ export class ProfileOcrService {
         throw new InvalidScreenshotError('It looks like your game might be in another language or the image is too blurry. Currently, only English profile and Pokémon detail screenshots are supported.', fullBinarizedText);
       }
 
+      const stardustStats = parseProfileStats(fullBinarizedText);
+      if (stardustStats && stardustStats.stardust != null) {
+        return { stats: stardustStats, rawText: fullBinarizedText };
+      }
+
 
       // Find dynamic anchor
       let activityYRatio = 0.60; // fallback for 16:9 phones

@@ -154,7 +154,7 @@ function cleanDigitCandidate(raw: string): number | null {
 function parseLevelNearKeyword(text: string): number | null {
   const activityIndex = text.search(/total\s*activity/i);
   const headerText =
-    activityIndex >= 0 ? text.slice(0, activityIndex) : text.slice(0, 2500);
+    activityIndex > 0 ? text.slice(0, activityIndex) : text.slice(0, 2500);
 
   // Match "80" (or "80 >") on line above "LEVEL" (or OCR typos like "LEVE1", "LEVEI", "LEVL")
   const numberAboveLabel = headerText.match(
@@ -380,7 +380,7 @@ function parseStructuralActivityCounts(text: string): {
     if (
       isXpProgressLine(line) ||
       /\b(?:km|mi|miles?)\b/i.test(line) ||
-      /\b(?:date|start)\b/i.test(line)
+      /\b(?:date|start|xp|total)\b/i.test(line)
     ) {
       continue;
     }
@@ -488,6 +488,10 @@ function parseTotalXp(text: string): number | null {
   return parseTotalXpFromText(text, false);
 }
 function parseStardust(text: string): number | null {
+  if (!/\b(?:stardust|star\s*dust|5tardust|siardust)\b/i.test(text)) {
+    return null;
+  }
+
   // 1. Number above "STARDUST" label (as seen on Pokémon inspection screens: "5,163,855 \n STARDUST")
   const numberAboveLabel = text.match(
     /(?:^|\n)\s*([\d,.]{1,12})[^\n]*\r?\n\s*(?:stardust|star\s*dust|5tardust|siardust|sta\s*rdust)\b/im
@@ -521,6 +525,23 @@ function parseStardust(text: string): number | null {
 }
 
 export function parseProfileStats(text: string): ProfileStats | null {
+  const stardust = parseStardust(text);
+
+  // If Stardust is detected, this is a Pokémon Detail / Stardust screenshot
+  if (stardust !== null) {
+    return {
+      level: null,
+      distanceWalked: null,
+      distanceUnit: null,
+      pokemonCaught: null,
+      pokestopsVisited: null,
+      totalXp: null,
+      stardust,
+      username: null,
+    };
+  }
+
+  // Otherwise, process as a Trainer Profile screenshot
   const structuralActivityCounts = parseStructuralActivityCounts(text);
   const totalXp = parseTotalXp(text);
   const level = parseLevel(text, totalXp);
@@ -528,7 +549,6 @@ export function parseProfileStats(text: string): ProfileStats | null {
   const pokemonCaught = parsePokemonCaught(text) ?? structuralActivityCounts.pokemonCaught;
   const pokestopsVisited = parsePokestopsVisited(text) ?? structuralActivityCounts.pokestopsVisited;
   const username = parseUsername(text);
-  const stardust = parseStardust(text);
 
   if (
     level === null &&
@@ -536,13 +556,12 @@ export function parseProfileStats(text: string): ProfileStats | null {
     pokemonCaught === null &&
     pokestopsVisited === null &&
     totalXp === null &&
-    stardust === null &&
     username === null
   ) {
     return null;
   }
 
-  const res: ProfileStats = {
+  return {
     level,
     distanceWalked: distance?.value ?? null,
     distanceUnit: distance?.unit ?? null,
@@ -551,10 +570,4 @@ export function parseProfileStats(text: string): ProfileStats | null {
     totalXp,
     username,
   };
-
-  if (stardust !== null) {
-    res.stardust = stardust;
-  }
-
-  return res;
 }

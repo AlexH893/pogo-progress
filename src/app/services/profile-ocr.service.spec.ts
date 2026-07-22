@@ -338,7 +338,7 @@ describe('ProfileOcrService', () => {
         Promise.resolve({ text: 'LEVEL 40', data: {} }),
         Promise.resolve({ text: 'LEVEL 40', data: {} }),
         Promise.resolve({ text: 'HEADER TEXT\nTrainerName', data: {} }),
-        Promise.resolve({ text: 'ACTIVITY TEXT', data: {} }),
+        Promise.resolve({ text: 'TOTAL ACTIVITY', data: {} }),
         Promise.resolve({ text: '100 km\n5,000\n2,000\n15,000,000', data: {} }),
         Promise.resolve({ text: 'RAW TEXT\nLEVEL 40\nTrainerName', data: {} })
       );
