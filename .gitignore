@@ -58,4 +58,10 @@ cypress_diff*.html
 cypress-debug.log
 
 
+# Scratch and debug files
+fix-*.js
+test-*.js
+error*.txt
+add-post-data.js
+
 *.log*
