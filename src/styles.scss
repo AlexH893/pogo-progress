@@ -139,12 +139,27 @@ input, select, textarea {
   border-radius: var(--border-radius-card);
   background: var(--color-surface);
   color: var(--color-text-primary);
+  max-width: 100%;
+  box-sizing: border-box;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 
   &:focus {
     outline: none;
     border-color: var(--color-primary);
     box-shadow: 0 0 0 3px rgba(255, 90, 0, 0.1);
+  }
+}
+
+.correction-box {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+
+  input {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
   }
 }
 

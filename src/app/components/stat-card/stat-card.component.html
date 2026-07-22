@@ -10,7 +10,7 @@
     </ng-container>
     <ng-container *ngIf="value === null || isEditing">
       <div class="missing-stat">
-        <span class="missing-dash" *ngIf="value === null">—</span>
+        <span class="missing-dash" *ngIf="value === null && !isEditing">—</span>
         <div class="correction-box">
           <input #valInput type="number" autofocus [step]="step" [value]="value !== null ? value : ''" [placeholder]="placeholder" (keyup.enter)="submitCorrection(valInput.value)" (blur)="submitCorrection(valInput.value)" />
         </div>
