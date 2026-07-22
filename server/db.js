@@ -22,4 +22,20 @@ pool.query = async function (sql, params) {
   return _query(sql, params);
 };
 
+// Auto-migration: ensure stardust column exists on stats table
+(async () => {
+  try {
+    const [rows] = await pool.query(
+      "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'stats' AND COLUMN_NAME = 'stardust'"
+    );
+    if (rows.length === 0) {
+      await pool.query("ALTER TABLE stats ADD COLUMN stardust BIGINT NULL AFTER total_xp");
+      console.log("Migration: Added 'stardust' column to 'stats' table.");
+    }
+  } catch (err) {
+    // If schema query fails or column exists, ignore
+    console.warn("Migration check for stardust column:", err.message);
+  }
+})();
+
 module.exports = pool;
