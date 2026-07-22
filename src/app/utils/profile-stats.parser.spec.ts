@@ -20,6 +20,20 @@ Level 45
     });
   });
 
+  it('parses Stardust from Pokémon detail screenshot text', () => {
+    const text = `
+Pikachu
+86 / 86 HP
+7.4kg WEIGHT  ELECTRIC  0.46m HEIGHT
+5,163,855
+STARDUST
+17,797
+PIKACHU CANDY
+    `;
+    const result = parseProfileStats(text);
+    expect(result?.stardust).toBe(5163855);
+  });
+
   it('parses walking distance with miles', () => {
     const text = `
 Level 32

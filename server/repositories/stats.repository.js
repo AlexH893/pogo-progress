@@ -11,10 +11,10 @@ class StatsRepository {
     return allStats.length > 0;
   }
 
-  async insertStat(username, level, distanceWalked, caught, stopVisited, totalXp, entryName, insertDate, uploadedAt = null) {
+  async insertStat(username, level, distanceWalked, caught, stopVisited, totalXp, entryName, insertDate, uploadedAt = null, stardust = null) {
     const [result] = await db.execute(
-      'INSERT INTO stats (username, level, distance_walked, caught, stop_visited, total_xp, entry_name, created_at, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))',
-      [username, level, distanceWalked, caught, stopVisited, totalXp, entryName, insertDate, uploadedAt]
+      'INSERT INTO stats (username, level, distance_walked, caught, stop_visited, total_xp, stardust, entry_name, created_at, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))',
+      [username, level, distanceWalked, caught, stopVisited, totalXp, stardust, entryName, insertDate, uploadedAt]
     );
     return result.insertId;
   }
@@ -24,16 +24,16 @@ class StatsRepository {
     return rows.length > 0 ? rows[0] : null;
   }
 
-  async updateStat(id, username, level, distanceWalked, caught, stopVisited, totalXp, entryName, createdAt = null) {
+  async updateStat(id, username, level, distanceWalked, caught, stopVisited, totalXp, entryName, createdAt = null, stardust = null) {
     if (createdAt) {
       await db.execute(
-        'UPDATE stats SET username = ?, level = ?, distance_walked = ?, caught = ?, stop_visited = ?, total_xp = ?, entry_name = ?, created_at = ? WHERE id = ?',
-        [username, level, distanceWalked, caught, stopVisited, totalXp, entryName, createdAt, id]
+        'UPDATE stats SET username = ?, level = ?, distance_walked = ?, caught = ?, stop_visited = ?, total_xp = ?, stardust = ?, entry_name = ?, created_at = ? WHERE id = ?',
+        [username, level, distanceWalked, caught, stopVisited, totalXp, stardust, entryName, createdAt, id]
       );
     } else {
       await db.execute(
-        'UPDATE stats SET username = ?, level = ?, distance_walked = ?, caught = ?, stop_visited = ?, total_xp = ?, entry_name = ? WHERE id = ?',
-        [username, level, distanceWalked, caught, stopVisited, totalXp, entryName, id]
+        'UPDATE stats SET username = ?, level = ?, distance_walked = ?, caught = ?, stop_visited = ?, total_xp = ?, stardust = ?, entry_name = ? WHERE id = ?',
+        [username, level, distanceWalked, caught, stopVisited, totalXp, stardust, entryName, id]
       );
     }
   }
@@ -89,7 +89,7 @@ class StatsRepository {
   }
 
   async getStatsByUsername(username) {
-    const [rows] = await db.execute('SELECT id, username, level, distance_walked, caught, stop_visited, total_xp, entry_name, created_at FROM stats WHERE username = ? AND is_deleted = 0 ORDER BY created_at ASC', [username]);
+    const [rows] = await db.execute('SELECT id, username, level, distance_walked, caught, stop_visited, total_xp, stardust, entry_name, created_at FROM stats WHERE username = ? AND is_deleted = 0 ORDER BY created_at ASC', [username]);
     return rows;
   }
 
@@ -100,7 +100,7 @@ class StatsRepository {
     const parsedLimit = parseInt(limit, 10) || 50;
     const parsedOffset = parseInt(offset, 10) || 0;
 
-    const [rows] = await db.execute(`SELECT id, username, level, distance_walked, caught, stop_visited, total_xp, entry_name, created_at FROM stats WHERE username = ? AND is_deleted = 0 ORDER BY ${actualSortField} ${actualSortDir} LIMIT ${parsedLimit} OFFSET ${parsedOffset}`, [username]);
+    const [rows] = await db.execute(`SELECT id, username, level, distance_walked, caught, stop_visited, total_xp, stardust, entry_name, created_at FROM stats WHERE username = ? AND is_deleted = 0 ORDER BY ${actualSortField} ${actualSortDir} LIMIT ${parsedLimit} OFFSET ${parsedOffset}`, [username]);
     return rows;
   }
 

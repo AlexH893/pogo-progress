@@ -4,7 +4,7 @@ const statsRepository = require('../repositories/stats.repository');
 
 exports.postData = async (req, res) => {
   try {
-    const { username, level, distanceWalked, caught, stopVisited, totalXp, entryName, createdAt, uploadedAt } = req.body;
+    const { username, level, distanceWalked, caught, stopVisited, totalXp, stardust, entryName, createdAt, uploadedAt } = req.body;
     if (!username) {
       return res.status(400).json({ error: 'Username required' });
     }
@@ -43,10 +43,10 @@ exports.postData = async (req, res) => {
 
     // 2. Handle Stats Table
     let statId = null;
-    if (distanceWalked !== undefined && caught !== undefined && totalXp !== undefined) {
+    if ((distanceWalked !== undefined && caught !== undefined && totalXp !== undefined) || stardust !== undefined) {
       const hasStats = await statsRepository.hasStats(username);
       
-      statId = await statsRepository.insertStat(username, level || null, distanceWalked || 0, caught || 0, stopVisited || null, totalXp || 0, entryName || null, insertDate, uploadedDate);
+      statId = await statsRepository.insertStat(username, level || null, distanceWalked || 0, caught || 0, stopVisited || null, totalXp || 0, entryName || null, insertDate, uploadedDate, stardust || null);
 
       // Turn off tutorial if this was their first successful upload
       if (!hasStats) {
@@ -65,7 +65,7 @@ exports.postData = async (req, res) => {
 exports.updateData = async (req, res) => {
   try {
     const statId = req.params.id;
-    const { username, level, distanceWalked, caught, stopVisited, totalXp, entryName, createdAt } = req.body;
+    const { username, level, distanceWalked, caught, stopVisited, totalXp, stardust, entryName, createdAt } = req.body;
     
     const stat = await statsRepository.getStatById(statId);
     if (!stat) return res.status(404).json({ error: 'Not found' });
@@ -83,7 +83,7 @@ exports.updateData = async (req, res) => {
       }
     }
 
-    await statsRepository.updateStat(statId, username, level || null, distanceWalked || 0, caught || 0, stopVisited || null, totalXp || 0, entryName || null, createdAt ? new Date(createdAt) : null);
+    await statsRepository.updateStat(statId, username, level || null, distanceWalked || 0, caught || 0, stopVisited || null, totalXp || 0, entryName || null, createdAt ? new Date(createdAt) : null, stardust || null);
 
     cache.invalidateUser(req.user ? req.user.googleId : null, [username, originalUsername]);
     res.json({ success: true });

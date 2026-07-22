@@ -60,8 +60,8 @@ describe('StatsRepository', () => {
       const result = await statsRepository.insertStat('testuser', 40, 100, 500, 200, 1000, 'entry', '2023-01-01');
 
       expect(db.execute).toHaveBeenCalledWith(
-        'INSERT INTO stats (username, level, distance_walked, caught, stop_visited, total_xp, entry_name, created_at, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))',
-        ['testuser', 40, 100, 500, 200, 1000, 'entry', '2023-01-01', null]
+        'INSERT INTO stats (username, level, distance_walked, caught, stop_visited, total_xp, stardust, entry_name, created_at, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))',
+        ['testuser', 40, 100, 500, 200, 1000, null, 'entry', '2023-01-01', null]
       );
       expect(result).toBe(42);
     });
@@ -97,8 +97,8 @@ describe('StatsRepository', () => {
       await statsRepository.updateStat(1, 'testuser', 40, 100, 500, 200, 1000, 'entry', '2023-01-01');
 
       expect(db.execute).toHaveBeenCalledWith(
-        'UPDATE stats SET username = ?, level = ?, distance_walked = ?, caught = ?, stop_visited = ?, total_xp = ?, entry_name = ?, created_at = ? WHERE id = ?',
-        ['testuser', 40, 100, 500, 200, 1000, 'entry', '2023-01-01', 1]
+        'UPDATE stats SET username = ?, level = ?, distance_walked = ?, caught = ?, stop_visited = ?, total_xp = ?, stardust = ?, entry_name = ?, created_at = ? WHERE id = ?',
+        ['testuser', 40, 100, 500, 200, 1000, null, 'entry', '2023-01-01', 1]
       );
     });
 
@@ -108,8 +108,8 @@ describe('StatsRepository', () => {
       await statsRepository.updateStat(1, 'testuser', 40, 100, 500, 200, 1000, 'entry');
 
       expect(db.execute).toHaveBeenCalledWith(
-        'UPDATE stats SET username = ?, level = ?, distance_walked = ?, caught = ?, stop_visited = ?, total_xp = ?, entry_name = ? WHERE id = ?',
-        ['testuser', 40, 100, 500, 200, 1000, 'entry', 1]
+        'UPDATE stats SET username = ?, level = ?, distance_walked = ?, caught = ?, stop_visited = ?, total_xp = ?, stardust = ?, entry_name = ? WHERE id = ?',
+        ['testuser', 40, 100, 500, 200, 1000, null, 'entry', 1]
       );
     });
   });
@@ -169,7 +169,7 @@ describe('StatsRepository', () => {
       const result = await statsRepository.getStatsByUsername('testuser');
 
       expect(db.execute).toHaveBeenCalledWith(
-        'SELECT id, username, level, distance_walked, caught, stop_visited, total_xp, entry_name, created_at FROM stats WHERE username = ? AND is_deleted = 0 ORDER BY created_at ASC',
+        'SELECT id, username, level, distance_walked, caught, stop_visited, total_xp, stardust, entry_name, created_at FROM stats WHERE username = ? AND is_deleted = 0 ORDER BY created_at ASC',
         ['testuser']
       );
       expect(result).toEqual(mockRows);
@@ -218,7 +218,7 @@ describe('StatsRepository', () => {
       const result = await statsRepository.getPaginatedStatsByUsername('testuser', undefined, undefined);
 
       expect(db.execute).toHaveBeenCalledWith(
-        'SELECT id, username, level, distance_walked, caught, stop_visited, total_xp, entry_name, created_at FROM stats WHERE username = ? AND is_deleted = 0 ORDER BY created_at DESC LIMIT 50 OFFSET 0',
+        'SELECT id, username, level, distance_walked, caught, stop_visited, total_xp, stardust, entry_name, created_at FROM stats WHERE username = ? AND is_deleted = 0 ORDER BY created_at DESC LIMIT 50 OFFSET 0',
         ['testuser']
       );
       expect(result).toEqual(mockRows);

@@ -7,6 +7,7 @@ const statsSchema = Joi.object({
   caught: Joi.number().integer().min(0).max(99999999).allow(null, ''),
   stopVisited: Joi.number().integer().min(0).max(99999999).allow(null, ''),
   totalXp: Joi.number().integer().min(0).max(2000000000).allow(null, ''),
+  stardust: Joi.number().integer().min(0).max(99999999999).allow(null, ''),
   entryName: Joi.string().trim().regex(/^[a-zA-Z0-9\s\-_!?.,()/'"]+$/).message('"entryName" must only contain standard text characters').max(100).allow(null, ''),
   createdAt: Joi.alternatives().try(Joi.date().iso(), Joi.string(), Joi.date()).allow(null, ''),
   uploadedAt: Joi.alternatives().try(Joi.date().iso(), Joi.string(), Joi.date()).allow(null, '')

@@ -471,6 +471,39 @@ function parseTotalXp(text: string): number | null {
 
   return parseTotalXpFromText(text, false);
 }
+function parseStardust(text: string): number | null {
+  // 1. Number above "STARDUST" label (as seen on Pokémon inspection screens: "5,163,855 \n STARDUST")
+  const numberAboveLabel = text.match(
+    /(?:^|\n)\s*([\d,.]{1,12})[^\n]*\r?\n\s*(?:stardust|star\s*dust|5tardust|siardust|sta\s*rdust)\b/im
+  );
+  if (numberAboveLabel) {
+    const val = parseInteger(numberAboveLabel[1]);
+    if (!Number.isNaN(val) && val >= 0) {
+      return val;
+    }
+  }
+
+  // 2. Same line label then number: "STARDUST 5,163,855" or "STARDUST: 5,163,855"
+  const labelFirst = text.match(/(?:stardust|star\s*dust|5tardust|siardust|sta\s*rdust)\b[^\d\n]*?([\d,.]{1,12})/i);
+  if (labelFirst) {
+    const val = parseInteger(labelFirst[1]);
+    if (!Number.isNaN(val) && val >= 0) {
+      return val;
+    }
+  }
+
+  // 3. Same line number then label: "5,163,855 STARDUST"
+  const numberFirst = text.match(/([\d,.]{1,12})[^\n]*?\b(?:stardust|star\s*dust|5tardust|siardust|sta\s*rdust)\b/i);
+  if (numberFirst) {
+    const val = parseInteger(numberFirst[1]);
+    if (!Number.isNaN(val) && val >= 0) {
+      return val;
+    }
+  }
+
+  return null;
+}
+
 export function parseProfileStats(text: string): ProfileStats | null {
   const structuralActivityCounts = parseStructuralActivityCounts(text);
   const totalXp = parseTotalXp(text);
@@ -479,6 +512,7 @@ export function parseProfileStats(text: string): ProfileStats | null {
   const pokemonCaught = parsePokemonCaught(text) ?? structuralActivityCounts.pokemonCaught;
   const pokestopsVisited = parsePokestopsVisited(text) ?? structuralActivityCounts.pokestopsVisited;
   const username = parseUsername(text);
+  const stardust = parseStardust(text);
 
   if (
     level === null &&
@@ -486,12 +520,13 @@ export function parseProfileStats(text: string): ProfileStats | null {
     pokemonCaught === null &&
     pokestopsVisited === null &&
     totalXp === null &&
+    stardust === null &&
     username === null
   ) {
     return null;
   }
 
-  return {
+  const res: ProfileStats = {
     level,
     distanceWalked: distance?.value ?? null,
     distanceUnit: distance?.unit ?? null,
@@ -500,4 +535,10 @@ export function parseProfileStats(text: string): ProfileStats | null {
     totalXp,
     username,
   };
+
+  if (stardust !== null) {
+    res.stardust = stardust;
+  }
+
+  return res;
 }

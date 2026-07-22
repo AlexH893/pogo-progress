@@ -63,6 +63,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     pokemonCaught: false,
     pokestopsVisited: false,
     totalXp: false,
+    stardust: false,
     username: false,
     entryName: false,
     createdAt: false,
@@ -128,6 +129,7 @@ export class HomeComponent implements OnInit, OnDestroy {
         caught: this.stats.pokemonCaught,
         stopVisited: this.stats.pokestopsVisited,
         totalXp: this.stats.totalXp,
+        stardust: this.stats.stardust,
         entryName: this.stats.entryName,
         createdAt: this.screenshotDate ? this.screenshotDate.toISOString() : undefined
       })
@@ -226,6 +228,7 @@ export class HomeComponent implements OnInit, OnDestroy {
       pokemonCaught: false,
       pokestopsVisited: false,
       totalXp: false,
+      stardust: false,
       username: false,
       entryName: false,
       createdAt: false,
@@ -257,9 +260,20 @@ export class HomeComponent implements OnInit, OnDestroy {
 
     try {
       const result = await this.profileOcr.extractFromFile(file);
-      this.username = result.stats.username || '';
-      this.stats = result.stats;
-      this.displayStats = { ...result.stats };
+      let extractedUsername = result.stats.username || this.knownTrainerName || this.username;
+      const isStardustOnly = result.stats.stardust !== undefined && 
+                             result.stats.stardust !== null && 
+                             result.stats.level === null && 
+                             result.stats.distanceWalked === null && 
+                             result.stats.totalXp === null;
+
+      if (isStardustOnly && !extractedUsername) {
+        throw new InvalidScreenshotError('Please upload a Trainer Profile screenshot first so we know which profile to link your Stardust to!', result.rawText);
+      }
+
+      this.username = extractedUsername || '';
+      this.stats = { ...result.stats, username: this.username };
+      this.displayStats = { ...this.stats };
       this.rawOcrText = result.rawText;
       const applySuccessState = () => {
         this.state = 'success';
@@ -417,6 +431,7 @@ export class HomeComponent implements OnInit, OnDestroy {
         else if (field === 'totalXp') parsed = Math.max(0, Math.min(2000000000, parsed));
         else if (field === 'pokemonCaught') parsed = Math.max(0, Math.min(99999999, parsed));
         else if (field === 'pokestopsVisited') parsed = Math.max(0, Math.min(99999999, parsed));
+        else if (field === 'stardust') parsed = Math.max(0, Math.min(99999999999, parsed));
 
         (this.stats as any)[field] = parsed;
         if (this.displayStats) (this.displayStats as any)[field] = parsed;
@@ -442,6 +457,7 @@ export class HomeComponent implements OnInit, OnDestroy {
       caught: this.stats.pokemonCaught,
       stopVisited: this.stats.pokestopsVisited,
       totalXp: this.stats.totalXp,
+      stardust: this.stats.stardust,
       entryName: this.stats.entryName,
       createdAt: this.screenshotDate ? this.screenshotDate.toISOString() : undefined
     };
@@ -506,13 +522,16 @@ export class HomeComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const diffs = {
+    const diffs: { level: number; distanceWalked: number; pokemonCaught: number; pokestopsVisited: number; totalXp: number; stardust?: number } = {
       level: (this.stats.level || 0) - (this.previousStats.level || 0),
       distanceWalked: (this.stats.distanceWalked || 0) - (this.previousStats.distance_walked || 0),
       pokemonCaught: (this.stats.pokemonCaught || 0) - (this.previousStats.caught || 0),
       pokestopsVisited: (this.stats.pokestopsVisited || 0) - (this.previousStats.stop_visited || 0),
       totalXp: (this.stats.totalXp || 0) - (this.previousStats.total_xp || 0),
     };
+    if (this.stats.stardust !== null && this.stats.stardust !== undefined && this.previousStats.stardust !== null && this.previousStats.stardust !== undefined) {
+      diffs.stardust = (this.stats.stardust || 0) - (this.previousStats.stardust || 0);
+    }
     
     console.log('calculated diffs:', diffs);
     console.log('this.stats:', this.stats);
@@ -523,7 +542,8 @@ export class HomeComponent implements OnInit, OnDestroy {
       diffs.distanceWalked !== 0 ||
       diffs.pokemonCaught !== 0 ||
       diffs.pokestopsVisited !== 0 ||
-      diffs.totalXp !== 0
+      diffs.totalXp !== 0 ||
+      (diffs.stardust !== undefined && diffs.stardust !== 0)
     ) {
       this.statDiffs = diffs;
 
@@ -538,6 +558,7 @@ export class HomeComponent implements OnInit, OnDestroy {
           pokemonCaught: diffs.pokemonCaught / this.diffDays,
           pokestopsVisited: diffs.pokestopsVisited / this.diffDays,
           totalXp: diffs.totalXp / this.diffDays,
+          stardust: diffs.stardust !== undefined ? diffs.stardust / this.diffDays : undefined,
         };
       } else {
         this.dailyAverages = null;
@@ -563,6 +584,7 @@ export class HomeComponent implements OnInit, OnDestroy {
       pokemonCaught: Number(this.previousStats.caught) || 0,
       pokestopsVisited: Number(this.previousStats.stop_visited) || 0,
       totalXp: Number(this.previousStats.total_xp) || 0,
+      stardust: Number(this.previousStats.stardust) || 0,
     };
 
     const targetObj = {
@@ -571,6 +593,7 @@ export class HomeComponent implements OnInit, OnDestroy {
       pokemonCaught: Number(this.stats.pokemonCaught) || 0,
       pokestopsVisited: Number(this.stats.pokestopsVisited) || 0,
       totalXp: Number(this.stats.totalXp) || 0,
+      stardust: Number(this.stats.stardust) || 0,
     };
 
     // Only apply starting values if the current parsed stat is not null (so we don't accidentally display '0' when missing)
@@ -579,6 +602,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     if (this.stats.pokemonCaught !== null) this.displayStats.pokemonCaught = startObj.pokemonCaught;
     if (this.stats.pokestopsVisited !== null) this.displayStats.pokestopsVisited = startObj.pokestopsVisited;
     if (this.stats.totalXp !== null) this.displayStats.totalXp = startObj.totalXp;
+    if (this.stats.stardust !== null) this.displayStats.stardust = startObj.stardust;
 
     const duration = 2000;
 
@@ -604,6 +628,7 @@ export class HomeComponent implements OnInit, OnDestroy {
             if (this.stats?.pokemonCaught !== null) this.displayStats.pokemonCaught = Math.round(startObj.pokemonCaught + (targetObj.pokemonCaught - startObj.pokemonCaught) * easedProgress);
             if (this.stats?.pokestopsVisited !== null) this.displayStats.pokestopsVisited = Math.round(startObj.pokestopsVisited + (targetObj.pokestopsVisited - startObj.pokestopsVisited) * easedProgress);
             if (this.stats?.totalXp !== null) this.displayStats.totalXp = Math.round(startObj.totalXp + (targetObj.totalXp - startObj.totalXp) * easedProgress);
+            if (this.stats?.stardust !== null) this.displayStats.stardust = Math.round(startObj.stardust + (targetObj.stardust - startObj.stardust) * easedProgress);
             
             // Trigger local change detection for this component only, preventing global app lag
             this.cdr.detectChanges();
@@ -621,6 +646,7 @@ export class HomeComponent implements OnInit, OnDestroy {
                 if (this.stats.pokemonCaught !== null) this.displayStats.pokemonCaught = targetObj.pokemonCaught;
                 if (this.stats.pokestopsVisited !== null) this.displayStats.pokestopsVisited = targetObj.pokestopsVisited;
                 if (this.stats.totalXp !== null) this.displayStats.totalXp = targetObj.totalXp;
+                if (this.stats.stardust !== null) this.displayStats.stardust = targetObj.stardust;
               }
               this.cdr.detectChanges();
             });

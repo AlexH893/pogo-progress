@@ -355,6 +355,18 @@ tick(100);
       // Should NOT post stats automatically if mismatched
       httpMock.expectNone(`${getApiUrl()}/post-data`);
     }));
+
+    it('should throw error when uploading a Stardust-only screenshot without a linked trainer', fakeAsync(() => {
+      const mockFile = new File([''], 'stardust.png', { type: 'image/png' });
+      const stats = { level: null, distanceWalked: null, totalXp: null, stardust: 5163855 };
+      mockOcrService.extractFromFile.and.returnValue(Promise.resolve({ stats, rawText: 'text' }));
+      
+      component.processFile(mockFile);
+      tick(100);
+      
+      expect(component.state).toBe('error');
+      expect(component.errorMessage).toContain('Please upload a Trainer Profile screenshot first');
+    }));
   });
   describe('Additional Coverage', () => {
     it('should handle dismissError', () => {

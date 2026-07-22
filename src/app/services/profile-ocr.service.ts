@@ -65,15 +65,15 @@ export class ProfileOcrService {
       const fullBinarizedText = fullBinarizedResult.text;
 
       const upperText = fullBinarizedText.toUpperCase();
-      const hasEnglishLabels = /TOTAL ACTIVITY|DISTANCE WALKED|CAUGHT|VISITED|POKEMON|POKESTOP/.test(upperText);
-      const hasBasicProfileIndicators = /LEVEL|XP|\d{1,3},\d{3}/.test(upperText) || upperText.includes('/');
+      const hasEnglishLabels = /TOTAL ACTIVITY|DISTANCE WALKED|CAUGHT|VISITED|POKEMON|POKESTOP|STARDUST/.test(upperText);
+      const hasBasicProfileIndicators = /LEVEL|XP|STARDUST|\d{1,3},\d{3}/.test(upperText) || upperText.includes('/');
 
       if (!hasBasicProfileIndicators && !hasEnglishLabels) {
-        throw new InvalidScreenshotError('This does not appear to be a Pokémon GO trainer profile screenshot. Please ensure you are on the profile screen.', fullBinarizedText);
+        throw new InvalidScreenshotError('This does not appear to be a Pokémon GO trainer profile or Pokémon detail screenshot. Please ensure you upload a valid screenshot.', fullBinarizedText);
       }
       
       if (hasBasicProfileIndicators && !hasEnglishLabels) {
-        throw new InvalidScreenshotError('It looks like your game might be in another language or the image is too blurry. Currently, only English profile screenshots are supported.', fullBinarizedText);
+        throw new InvalidScreenshotError('It looks like your game might be in another language or the image is too blurry. Currently, only English profile and Pokémon detail screenshots are supported.', fullBinarizedText);
       }
 
 
@@ -153,7 +153,7 @@ export class ProfileOcrService {
     if (!primary && !secondary) return null;
     if (!primary) return secondary;
     if (!secondary) return primary;
-    return {
+    const mergedStats: ProfileStats = {
       ...primary,
       level: primary.level ?? secondary.level,
       distanceWalked: primary.distanceWalked ?? secondary.distanceWalked,
@@ -165,6 +165,12 @@ export class ProfileOcrService {
         ? (primary.username.length >= secondary.username.length ? primary.username : secondary.username)
         : (primary.username ?? secondary.username),
     };
+
+    if (primary.stardust !== undefined || secondary.stardust !== undefined) {
+      mergedStats.stardust = primary.stardust ?? secondary.stardust ?? null;
+    }
+
+    return mergedStats;
   }
 
   private loadImage(file: File): Promise<{ img: HTMLImageElement; url: string }> {

@@ -35,7 +35,7 @@ describe('ProfileOcrService', () => {
         fail('Should have thrown InvalidScreenshotError');
       } catch (err) {
         expect(err instanceof InvalidScreenshotError).toBeTrue();
-        expect((err as any).message).toContain('This does not appear to be a Pokémon GO trainer profile screenshot');
+        expect((err as any).message).toContain('This does not appear to be a Pokémon GO trainer profile');
       }
     });
 
