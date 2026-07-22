@@ -32,6 +32,10 @@ pool.query = async function (sql, params) {
       await pool.query("ALTER TABLE stats ADD COLUMN stardust BIGINT NULL AFTER total_xp");
       console.log("Migration: Added 'stardust' column to 'stats' table.");
     }
+    // Clean up existing Stardust entries where zeroes were saved instead of NULL
+    await pool.query(
+      "UPDATE stats SET distance_walked = NULL, caught = NULL, total_xp = NULL WHERE stardust IS NOT NULL AND level IS NULL AND (caught = 0 OR distance_walked = 0 OR total_xp = 0)"
+    );
   } catch (err) {
     // If schema query fails or column exists, ignore
     console.warn("Migration check for stardust column:", err.message);

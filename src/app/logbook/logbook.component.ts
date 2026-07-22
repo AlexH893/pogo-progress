@@ -439,6 +439,10 @@ export class LogbookComponent implements OnInit, AfterViewInit {
     }
   }
 
+  isStardustEntry(row: any): boolean {
+    return row && row.stardust != null && (row.level == null || row.level === 0) && (row.total_xp == null || row.total_xp === 0);
+  }
+
   formatDate(dateStr: string): string {
     // Bare datetime strings from the DB (e.g. "2026-06-16 11:15:43" or
     // "2026-06-16T11:15:43") have no timezone suffix and are treated as

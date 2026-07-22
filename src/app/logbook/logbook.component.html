@@ -96,23 +96,23 @@
               <input *ngIf="editingCell?.id === row.id && editingCell?.field === 'entry_name'" type="text" maxlength="30" [value]="row.entry_name || ''" #inlineInput autofocus (keyup.enter)="inlineInput.blur()" (blur)="saveInlineEdit(row, 'entry_name', inlineInput.value)" (click)="$event.stopPropagation()" class="inline-edit-input" />
             </td>
             <td data-label="Level" class="editable-cell" (click)="startInlineEdit(row, 'level', $event)">
-              <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'level')">{{ row.level || '—' }}</span>
+              <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'level')">{{ !isStardustEntry(row) && row.level ? row.level : '—' }}</span>
               <input *ngIf="editingCell?.id === row.id && editingCell?.field === 'level'" type="number" min="1" max="80" [value]="row.level || ''" #inlineInput autofocus (keyup.enter)="inlineInput.blur()" (blur)="saveInlineEdit(row, 'level', inlineInput.value)" (click)="$event.stopPropagation()" (keydown)="preventInvalidChars($event)" class="inline-edit-input" />
             </td>
             <td data-label="Total XP" class="editable-cell" (click)="startInlineEdit(row, 'total_xp', $event)">
-              <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'total_xp')">{{ row.total_xp ? row.total_xp.toLocaleString() : '—' }}</span>
+              <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'total_xp')">{{ !isStardustEntry(row) && row.total_xp ? row.total_xp.toLocaleString() : '—' }}</span>
               <input *ngIf="editingCell?.id === row.id && editingCell?.field === 'total_xp'" type="number" min="0" max="2000000000" [value]="row.total_xp || ''" #inlineInput autofocus (keyup.enter)="inlineInput.blur()" (blur)="saveInlineEdit(row, 'total_xp', inlineInput.value)" (click)="$event.stopPropagation()" (keydown)="preventInvalidChars($event)" class="inline-edit-input" />
             </td>
             <td data-label="Distance" class="editable-cell" (click)="startInlineEdit(row, 'distance_walked', $event)">
-              <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'distance_walked')">{{ row.distance_walked !== null ? getDisplayDistance(row.distance_walked, row.default_unit) : '—' }}</span>
+              <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'distance_walked')">{{ !isStardustEntry(row) && row.distance_walked !== null ? getDisplayDistance(row.distance_walked, row.default_unit) : '—' }}</span>
               <input *ngIf="editingCell?.id === row.id && editingCell?.field === 'distance_walked'" type="number" min="0" max="1000000" step="0.1" [value]="row.distance_walked !== null ? row.distance_walked : ''" #inlineInput autofocus (keyup.enter)="inlineInput.blur()" (blur)="saveInlineEdit(row, 'distance_walked', inlineInput.value)" (click)="$event.stopPropagation()" (keydown)="preventInvalidChars($event, true)" class="inline-edit-input" />
             </td>
             <td data-label="Caught" class="editable-cell" (click)="startInlineEdit(row, 'caught', $event)">
-              <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'caught')">{{ row.caught !== null ? row.caught.toLocaleString() : '—' }}</span>
+              <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'caught')">{{ !isStardustEntry(row) && row.caught !== null ? row.caught.toLocaleString() : '—' }}</span>
               <input *ngIf="editingCell?.id === row.id && editingCell?.field === 'caught'" type="number" min="0" max="99999999" [value]="row.caught !== null ? row.caught : ''" #inlineInput autofocus (keyup.enter)="inlineInput.blur()" (blur)="saveInlineEdit(row, 'caught', inlineInput.value)" (click)="$event.stopPropagation()" (keydown)="preventInvalidChars($event)" class="inline-edit-input" />
             </td>
             <td data-label="PokéStops" class="editable-cell" (click)="startInlineEdit(row, 'stop_visited', $event)">
-              <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'stop_visited')">{{ row.stop_visited !== null ? row.stop_visited.toLocaleString() : '—' }}</span>
+              <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'stop_visited')">{{ !isStardustEntry(row) && row.stop_visited !== null ? row.stop_visited.toLocaleString() : '—' }}</span>
               <input *ngIf="editingCell?.id === row.id && editingCell?.field === 'stop_visited'" type="number" min="0" max="99999999" [value]="row.stop_visited !== null ? row.stop_visited : ''" #inlineInput autofocus (keyup.enter)="inlineInput.blur()" (blur)="saveInlineEdit(row, 'stop_visited', inlineInput.value)" (click)="$event.stopPropagation()" (keydown)="preventInvalidChars($event)" class="inline-edit-input" />
             </td>
             <td data-label="Stardust" class="editable-cell" (click)="startInlineEdit(row, 'stardust', $event)">

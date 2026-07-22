@@ -46,7 +46,18 @@ exports.postData = async (req, res) => {
     if ((distanceWalked !== undefined && caught !== undefined && totalXp !== undefined) || stardust !== undefined) {
       const hasStats = await statsRepository.hasStats(username);
       
-      statId = await statsRepository.insertStat(username, level || null, distanceWalked || 0, caught || 0, stopVisited || null, totalXp || 0, entryName || null, insertDate, uploadedDate, stardust || null);
+      statId = await statsRepository.insertStat(
+        username,
+        level != null ? level : null,
+        distanceWalked != null ? distanceWalked : null,
+        caught != null ? caught : null,
+        stopVisited != null ? stopVisited : null,
+        totalXp != null ? totalXp : null,
+        entryName || null,
+        insertDate,
+        uploadedDate,
+        stardust != null ? stardust : null
+      );
 
       // Turn off tutorial if this was their first successful upload
       if (!hasStats) {
@@ -83,7 +94,18 @@ exports.updateData = async (req, res) => {
       }
     }
 
-    await statsRepository.updateStat(statId, username, level || null, distanceWalked || 0, caught || 0, stopVisited || null, totalXp || 0, entryName || null, createdAt ? new Date(createdAt) : null, stardust || null);
+    await statsRepository.updateStat(
+      statId,
+      username,
+      level != null ? level : null,
+      distanceWalked != null ? distanceWalked : null,
+      caught != null ? caught : null,
+      stopVisited != null ? stopVisited : null,
+      totalXp != null ? totalXp : null,
+      entryName || null,
+      createdAt ? new Date(createdAt) : null,
+      stardust != null ? stardust : null
+    );
 
     cache.invalidateUser(req.user ? req.user.googleId : null, [username, originalUsername]);
     res.json({ success: true });
