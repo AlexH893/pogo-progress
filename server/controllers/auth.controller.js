@@ -22,12 +22,12 @@ exports.googleAuth = async (req, res) => {
     });
     const payload = ticket.getPayload();
     
-    // Issue our own JWT
+    // Issue our own JWT (default 30 days expiration, or set JWT_EXPIRES_IN env var)
     const token = jwt.sign({
       googleId: payload.sub,
       email: payload.email,
       name: payload.name
-    }, JWT_SECRET, { expiresIn: '7d' });
+    }, JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '30d' });
     
     res.json({ token, user: { googleId: payload.sub, email: payload.email, name: payload.name } });
   } catch (err) {

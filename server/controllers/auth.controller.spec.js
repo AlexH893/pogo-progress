@@ -72,7 +72,7 @@ describe('Auth Controller', () => {
           name: 'Test User'
         },
         'test-secret',
-        { expiresIn: '7d' }
+        { expiresIn: process.env.JWT_EXPIRES_IN || '30d' }
       );
 
       expect(mockRes.json).toHaveBeenCalledWith({
