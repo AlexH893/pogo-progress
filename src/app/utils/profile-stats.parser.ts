@@ -57,11 +57,11 @@ function cleanUsername(candidate: string): string {
     username = 'Stillworld';
   }
   
-  if (username.length < 3) {
+  if (username.length < 3 || /^\d+$/.test(username)) {
     return '';
   }
   
-  if (/^(pokemon|pokmon|distance|total|level|activity|pokestops?|visited|caught|history|journal|me|buddy|any|play|liar|senet|een|nal|se)$/i.test(username)) {
+  if (/^(pokemon|pokmon|distance|total|level|activity|pokestops?|visited|caught|history|journal|me|buddy|any|play|liar|senet|een|nal|se|stardust|candy|height|weight|mega|energy|power|up|hp|cp|gyms|raids|trainer|battles)$/i.test(username)) {
     return '';
   }
 
@@ -69,6 +69,11 @@ function cleanUsername(candidate: string): string {
 }
 
 function parseUsername(text: string): string | null {
+  // Pokémon detail screens do not show the trainer username
+  if (/stardust|candy|mega\s*energy|power\s*up/i.test(text) && !/total\s*activity/i.test(text)) {
+    return null;
+  }
+
   const lines = text.split(/\r?\n/).map(line => line.trim());
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -300,6 +305,9 @@ function parseDistance(
 }
 
 function parsePokemonCaught(text: string): number | null {
+  if (/stardust|candy|mega\s*energy|power\s*up/i.test(text) && !/total\s*activity/i.test(text)) {
+    return null;
+  }
   const patterns: RegExp[] = [
     /([\d,.]+)[ \t]+pok[eéè]?\s*mon\s*caught/i,
     /([\d,.]+)[ \t]+pok\w*\s*caught/i,
@@ -328,6 +336,9 @@ function parsePokemonCaught(text: string): number | null {
 }
 
 function parsePokestopsVisited(text: string): number | null {
+  if (/stardust|candy|mega\s*energy|power\s*up/i.test(text) && !/total\s*activity/i.test(text)) {
+    return null;
+  }
   const patterns: RegExp[] = [
     /([\d,.]+)[ \t]+pok[eéè]?s?tops?(?:\s*visited)?/i,
     /pok[eéè]?s?tops?(?:\s*visited)?[^0-9\n]*?([\d,.]+)/i,
@@ -357,6 +368,11 @@ function parseStructuralActivityCounts(text: string): {
   pokemonCaught: number | null;
   pokestopsVisited: number | null;
 } {
+  // Bypass structural fallback on Pokémon detail screens (prevents Candy/Candy XL from being read as Caught/Stops)
+  if (/stardust|candy|mega\s*energy|power\s*up/i.test(text) && !/total\s*activity/i.test(text)) {
+    return { pokemonCaught: null, pokestopsVisited: null };
+  }
+
   const counts = new Map<number, number>();
   const lines = text.split(/\r?\n/);
 
