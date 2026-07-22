@@ -55,6 +55,7 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   screenshotDate: Date | null = null;
   usedFallbackDate: boolean = false;
+  isStardustOnlyUpload: boolean = false;
 
   editingFields: Record<keyof ProfileStats | 'createdAt', boolean> = {
     level: false,
@@ -221,6 +222,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.isAnimating = false;
     this.screenshotDate = null;
     this.usedFallbackDate = false;
+    this.isStardustOnlyUpload = false;
     this.editingFields = {
       level: false,
       distanceWalked: false,
@@ -271,6 +273,7 @@ export class HomeComponent implements OnInit, OnDestroy {
         throw new InvalidScreenshotError('Please upload a Trainer Profile screenshot first so we know which profile to link your Stardust to!', result.rawText);
       }
 
+      this.isStardustOnlyUpload = isStardustOnly;
       this.username = extractedUsername || '';
       this.stats = { ...result.stats, username: this.username };
       this.displayStats = { ...this.stats };

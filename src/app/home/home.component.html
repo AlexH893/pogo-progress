@@ -83,6 +83,7 @@
 
       <dl class="stats__grid dashboard-stats-grid tabular-nums">
         <app-stat-card
+          *ngIf="!isStardustOnlyUpload"
           label="Level"
           [value]="stats.level"
           [displayValue]="displayStats?.level?.toString() || ''"
@@ -95,6 +96,7 @@
         </app-stat-card>
 
         <app-stat-card
+          *ngIf="!isStardustOnlyUpload"
           label="Total XP"
           [value]="stats.totalXp"
           [displayValue]="displayStats ? formatCount(displayStats.totalXp) : ''"
@@ -107,6 +109,7 @@
         </app-stat-card>
 
         <app-stat-card
+          *ngIf="!isStardustOnlyUpload"
           label="Distance"
           [value]="stats.distanceWalked"
           [displayValue]="displayStats ? formatDistance(displayStats) : ''"
@@ -120,6 +123,7 @@
         </app-stat-card>
 
         <app-stat-card
+          *ngIf="!isStardustOnlyUpload"
           label="Caught"
           [value]="stats.pokemonCaught"
           [displayValue]="displayStats ? formatCount(displayStats.pokemonCaught) : ''"
@@ -132,6 +136,7 @@
         </app-stat-card>
 
         <app-stat-card
+          *ngIf="!isStardustOnlyUpload"
           label="PokéStops"
           [value]="stats.pokestopsVisited"
           [displayValue]="displayStats ? formatCount(displayStats.pokestopsVisited) : ''"
@@ -144,6 +149,7 @@
         </app-stat-card>
 
         <app-stat-card
+          *ngIf="isStardustOnlyUpload || (stats.stardust !== null && stats.stardust !== undefined)"
           label="Stardust"
           [value]="stats.stardust ?? null"
           [displayValue]="displayStats ? formatCount(displayStats.stardust) : ''"
