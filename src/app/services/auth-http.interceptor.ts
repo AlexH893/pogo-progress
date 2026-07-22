@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpRequest, HttpHandler, HttpEvent, HttpInterceptor, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { getApiUrl } from '../config';
 import { AuthService } from './auth.service';
 
 @Injectable()
@@ -10,9 +11,13 @@ export class AuthHttpInterceptor implements HttpInterceptor {
 
   intercept(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
     const token = this.authService.getToken();
+    const apiUrl = getApiUrl();
     
-    // Check if the request is an API request (relative path or our known backend domains)
-    const isApiUrl = request.url.startsWith('/') || request.url.includes('localhost') || request.url.includes('pogo-progress.onrender.com');
+    // Check if the request is an API request
+    const isApiUrl = request.url.startsWith('/') ||
+                     (!!apiUrl && request.url.startsWith(apiUrl)) ||
+                     request.url.includes('localhost') ||
+                     request.url.includes('127.0.0.1');
     if (token && isApiUrl) {
       request = request.clone({
         setHeaders: {
