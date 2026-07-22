@@ -36,13 +36,13 @@ export class ProgressChartComponent implements OnChanges {
     const data = this.userHistory.map(row => row[this.selectedMetric]);
 
     let labelText = '';
-    let themeColor = '#81c784';
+    let themeColor = '#FF5A00'; // Default Daylight Orange
     switch (this.selectedMetric) {
-      case 'level': labelText = 'Level'; themeColor = '#ffd54f'; break;
-      case 'distance_walked': labelText = 'Distance Walked (km)'; themeColor = '#4fc3f7'; break;
-      case 'caught': labelText = 'Pokémon Caught'; themeColor = '#81c784'; break;
-      case 'stop_visited': labelText = 'Pokéstops Visited'; themeColor = '#ffb74d'; break;
-      case 'total_xp': labelText = 'Total XP'; themeColor = '#ba68c8'; break;
+      case 'level': labelText = 'Level'; themeColor = '#1A1A1A'; break; // Charcoal
+      case 'distance_walked': labelText = 'Distance Walked (km)'; themeColor = '#B4A6F0'; break; // Light Purple
+      case 'caught': labelText = 'Pokémon Caught'; themeColor = '#FFC107'; break; // Yellow
+      case 'stop_visited': labelText = 'Pokéstops Visited'; themeColor = '#1A1A1A'; break; // Charcoal
+      case 'total_xp': labelText = 'Total XP'; themeColor = '#FF5A00'; break; // Orange
     }
 
     const isLevel = this.selectedMetric === 'level';
@@ -50,11 +50,11 @@ export class ProgressChartComponent implements OnChanges {
     const gradient = ctx.createLinearGradient(0, 0, 0, 400);
     const hexToRgb = (hex: string) => {
       const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-      return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '129, 199, 132';
+      return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '255, 90, 0';
     };
     const rgbColor = hexToRgb(themeColor);
     
-    gradient.addColorStop(0, `rgba(${rgbColor}, 0.5)`);
+    gradient.addColorStop(0, `rgba(${rgbColor}, 0.2)`);
     gradient.addColorStop(1, `rgba(${rgbColor}, 0)`);
 
     if (this.chartInstance) {
@@ -67,7 +67,7 @@ export class ProgressChartComponent implements OnChanges {
       (this.chartInstance.data.datasets[0] as any).pointHoverBorderColor = themeColor;
       
       if (this.chartInstance.options.plugins && this.chartInstance.options.plugins.tooltip) {
-        this.chartInstance.options.plugins.tooltip.borderColor = `rgba(${rgbColor}, 0.3)`;
+        this.chartInstance.options.plugins.tooltip.borderColor = `rgba(${rgbColor}, 0.1)`;
       }
 
       if (this.chartInstance.options.scales && this.chartInstance.options.scales['y']) {
@@ -87,12 +87,12 @@ export class ProgressChartComponent implements OnChanges {
           borderColor: themeColor,
           backgroundColor: gradient,
           borderWidth: 3,
-          tension: 0.4,
+          tension: 0.4, // Smooth daylight curves
           fill: true,
           pointBackgroundColor: themeColor,
           pointRadius: 0,
           pointHoverRadius: 6,
-          pointHoverBackgroundColor: '#fff',
+          pointHoverBackgroundColor: '#FFFFFF',
           pointHoverBorderColor: themeColor,
           pointHoverBorderWidth: 3
         }]
@@ -100,6 +100,10 @@ export class ProgressChartComponent implements OnChanges {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        animation: {
+          duration: 1500,
+          easing: 'easeOutQuart'
+        },
         interaction: {
           mode: 'index',
           intersect: false,
@@ -107,15 +111,18 @@ export class ProgressChartComponent implements OnChanges {
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: 'rgba(20, 20, 20, 0.9)',
-            titleColor: '#e8f5e9',
-            bodyColor: '#e8f5e9',
-            borderColor: `rgba(${rgbColor}, 0.3)`,
+            backgroundColor: '#FFFFFF',
+            titleColor: '#1A1A1A',
+            bodyColor: '#1A1A1A',
+            borderColor: `rgba(0,0,0,0.1)`,
             borderWidth: 1,
             padding: 12,
             displayColors: true,
             usePointStyle: true,
             boxPadding: 6,
+            cornerRadius: 12, // Soft rounded tooltips
+            titleFont: { family: "'Inter', sans-serif", weight: 'bold' },
+            bodyFont: { family: "'Inter', sans-serif" },
             callbacks: {
               label: function(context) {
                 let label = context.dataset.label || '';
@@ -134,16 +141,16 @@ export class ProgressChartComponent implements OnChanges {
           x: {
             grid: { display: false },
             border: { display: false },
-            ticks: { color: 'rgba(232, 245, 233, 0.5)' }
+            ticks: { color: '#6B6B6B', font: { family: "'Inter', sans-serif" } }
           },
           y: {
             max: isLevel ? 80 : undefined,
             grid: { 
-              color: 'rgba(232, 245, 233, 0.05)',
+              color: 'rgba(0, 0, 0, 0.05)',
               tickLength: 0
             },
-            border: { dash: [5, 5], display: false },
-            ticks: { color: 'rgba(232, 245, 233, 0.5)' }
+            border: { display: false },
+            ticks: { color: '#6B6B6B', font: { family: "'Inter', sans-serif" } }
           }
         }
       }

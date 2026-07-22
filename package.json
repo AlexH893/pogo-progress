@@ -17,7 +17,10 @@
     "dev:ssr": "ng run pogo-progress:serve-ssr",
     "serve:ssr": "node dist/pogo-progress/server/main.js",
     "build:ssr": "ng build && ng run pogo-progress:server",
-    "prerender": "ng run pogo-progress:prerender"
+    "prerender": "ng run pogo-progress:prerender",
+    "test:server": "jest --config=server/jest.config.js",
+    "loadtest": "node loadtest-post.js",
+    "server:loadtest": "DISABLE_RATE_LIMIT=true node ./server/app.js"
   },
   "private": true,
   "dependencies": {
@@ -58,14 +61,17 @@
     "@types/file-saver": "^2.0.7",
     "@types/jasmine": "~4.3.0",
     "@types/node": "^18.18.0",
+    "autocannon": "^8.0.0",
     "browser-sync": "^3.0.0",
     "cypress": "^13.17.0",
     "jasmine-core": "~4.5.0",
+    "jest": "^29.7.0",
     "karma": "~6.4.0",
     "karma-chrome-launcher": "~3.1.0",
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.0.0",
+    "supertest": "^7.2.2",
     "tsx": "^4.22.4",
     "typescript": "~5.4.5"
   }

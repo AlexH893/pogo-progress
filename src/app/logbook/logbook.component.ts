@@ -16,7 +16,9 @@ export class LogbookComponent implements OnInit, AfterViewInit {
   editingRowId: number | null = null;
   editingCell: { id: number, field: string } | null = null;
   editData: any = {};
-  isLoading = true;
+  isLoading = true; // Chart loading
+  isTableLoading = false; // Pagination loading
+  isInitialTableLoad = true; // Initial table load
   user$ = this.authService.user$;
   showUploadedDate: boolean = false;
   velocityStats: any = null;
@@ -25,6 +27,11 @@ export class LogbookComponent implements OnInit, AfterViewInit {
   sortField: 'created_at' | 'uploaded_at' = 'created_at';
   sortDirection: 'asc' | 'desc' = 'desc';
 
+  page = 0;
+  limit = 20;
+  hasMoreData = true;
+
+  @ViewChild('sentinel') sentinel!: ElementRef<HTMLDivElement>;
   selectedEntryIds: Set<number> = new Set();
   comparisonResult: any = null;
 
@@ -35,10 +42,25 @@ export class LogbookComponent implements OnInit, AfterViewInit {
   constructor(private http: HttpClient, private authService: AuthService, private toastService: ToastService, private el: ElementRef) {}
 
   ngOnInit(): void {
-    this.fetchData();
+    this.fetchChartData();
+    this.fetchTableData(true);
   }
 
   ngAfterViewInit(): void {
+    if (typeof IntersectionObserver !== 'undefined') {
+      const observer = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && !this.isTableLoading && this.hasMoreData) {
+          this.fetchTableData();
+        }
+      }, { rootMargin: '100px' });
+
+      setTimeout(() => {
+        if (this.sentinel?.nativeElement) {
+          observer.observe(this.sentinel.nativeElement);
+        }
+      }, 500);
+    }
+
     // Bug 6: The native <dialog> Escape key closes the element without
     // firing our (click) handler, leaving selectedEntryIds out of sync.
     // Listen to the 'cancel' event (fired by the browser on Escape) and
@@ -54,11 +76,7 @@ export class LogbookComponent implements OnInit, AfterViewInit {
   }
 
   get sortedStats(): any[] {
-    return [...this.stats].sort((a, b) => {
-      const aVal = a[this.sortField] ? new Date(a[this.sortField]).getTime() : 0;
-      const bVal = b[this.sortField] ? new Date(b[this.sortField]).getTime() : 0;
-      return this.sortDirection === 'desc' ? bVal - aVal : aVal - bVal;
-    });
+    return this.stats;
   }
 
   sortBy(field: 'created_at' | 'uploaded_at'): void {
@@ -68,32 +86,58 @@ export class LogbookComponent implements OnInit, AfterViewInit {
       this.sortField = field;
       this.sortDirection = 'desc';
     }
+    this.fetchTableData(true);
   }
 
-  fetchData(): void {
+  fetchChartData(): void {
     this.isLoading = true;
-    console.log('[Logbook] Fetching data...');
-    this.http.get<any[]>(`${getApiUrl()}/get-data`).subscribe({
+    this.http.get<any[]>(`${getApiUrl()}/get-chart-data`).subscribe({
       next: (data) => {
-        console.log('[Logbook] Received data:', data);
-        this.stats = data;
+        this.chartData = data;
         this.updateChartData();
         this.isLoading = false;
       },
       error: (err) => {
-        console.error('[Logbook] Failed to fetch data:', err);
+        console.error('[Logbook] Failed to fetch chart data:', err);
         this.isLoading = false;
       }
     });
   }
 
+  fetchTableData(reset = false): void {
+    if (reset) {
+      this.page = 0;
+      this.stats = [];
+      this.hasMoreData = true;
+    }
+    if (!this.hasMoreData || this.isTableLoading) return;
+    
+    this.isTableLoading = true;
+    const url = `${getApiUrl()}/get-data?limit=${this.limit}&offset=${this.page * this.limit}&sortField=${this.sortField}&sortDir=${this.sortDirection}`;
+    this.http.get<any[]>(url).subscribe({
+      next: (data) => {
+        if (data.length < this.limit) {
+          this.hasMoreData = false;
+        }
+        this.stats = reset ? data : [...this.stats, ...data];
+        this.page++;
+        this.isTableLoading = false;
+        this.isInitialTableLoad = false;
+      },
+      error: (err) => {
+        console.error('[Logbook] Failed to fetch table data:', err);
+        this.isTableLoading = false;
+        this.isInitialTableLoad = false;
+      }
+    });
+  }
+
   updateChartData(): void {
-    if (this.stats && this.stats.length > 0) {
-      const firstEntryWithUser = this.stats.find(row => row.username);
+    if (this.chartData && this.chartData.length > 0) {
+      const firstEntryWithUser = this.chartData.find(row => row.username);
       this.primaryTrainer = firstEntryWithUser ? firstEntryWithUser.username : '';
       
-      this.chartData = [...this.stats]
-        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      this.chartData.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
         
       this.calculateVelocity();
     } else {
@@ -104,7 +148,7 @@ export class LogbookComponent implements OnInit, AfterViewInit {
   }
 
   calculateVelocity(): void {
-    const sorted = this.sortedStats;
+    const sorted = [...this.chartData].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     if (!sorted || sorted.length < 2) {
       this.velocityStats = null;
       return;
@@ -210,7 +254,8 @@ export class LogbookComponent implements OnInit, AfterViewInit {
 
     this.http.put(`${getApiUrl()}/update-data/${savedRowId}`, payload).subscribe({
       next: () => {
-        this.fetchData();
+        this.fetchChartData();
+        this.fetchTableData(true);
         // Only clear the edit state if the user hasn't already started editing another row
         if (this.editingRowId === savedRowId) {
           this.editingRowId = null;
@@ -274,12 +319,13 @@ export class LogbookComponent implements OnInit, AfterViewInit {
 
     this.http.put(`${getApiUrl()}/update-data/${row.id}`, payload).subscribe({
       next: () => {
-        this.updateChartData();
+        this.fetchChartData();
+        this.fetchTableData(true);
       },
       error: (err) => {
         console.error('Failed to update inline data', err);
         this.toastService.show('Failed to save edit. Changes reverted.', 'error');
-        this.fetchData(); // Rollback on error
+        this.fetchTableData(true); // Rollback on error
       }
     });
   }
@@ -303,7 +349,8 @@ export class LogbookComponent implements OnInit, AfterViewInit {
     if (this.pendingDeleteId !== null) {
       this.http.delete(`${getApiUrl()}/delete-data/${this.pendingDeleteId}`).subscribe({
         next: () => {
-          this.fetchData();
+          this.fetchChartData();
+          this.fetchTableData(true);
           this.closeDeleteDialog();
         },
         // Bug 3: Previously only console.error'd — dialog stayed open with no feedback.

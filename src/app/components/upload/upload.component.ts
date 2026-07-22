@@ -1,11 +1,11 @@
-import { Component, EventEmitter, Input, Output, ViewChild, ElementRef } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, ViewChild, ElementRef } from '@angular/core';
 
 @Component({
   selector: 'app-upload',
   templateUrl: './upload.component.html',
   styleUrls: ['./upload.component.scss']
 })
-export class UploadComponent {
+export class UploadComponent implements OnChanges {
   @Input() isProcessing = false;
   @Input() previewUrl: string | null = null;
   @Input() state: string = 'idle';
@@ -19,8 +19,27 @@ export class UploadComponent {
   @Output() playDemo = new EventEmitter<void>();
 
   isDragOver = false;
+  isAnimatingOut = false;
+  private animatingOutTimer: any = null;
   
   private readonly validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+
+  ngOnChanges(changes: SimpleChanges): void {
+    const processingChange = changes['isProcessing'];
+    if (processingChange) {
+      if (processingChange.currentValue === true) {
+        // Small delay so the image is visible for a beat before animating out
+        clearTimeout(this.animatingOutTimer);
+        this.animatingOutTimer = setTimeout(() => {
+          this.isAnimatingOut = true;
+        }, 150);
+      } else {
+        // Reset when processing ends (e.g. error state resets the form)
+        clearTimeout(this.animatingOutTimer);
+        this.isAnimatingOut = false;
+      }
+    }
+  }
 
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;

@@ -1,40 +1,82 @@
 .diff-section {
-  text-align: center;
-  
+  background: var(--color-surface);
+  border: var(--border-subtle);
+  border-radius: var(--border-radius-card);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-soft);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+
+  &:hover {
+    box-shadow: var(--shadow-float);
+    transform: translateY(-2px);
+  }
+}
+
+.diff-header {
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: var(--border-subtle);
+
+  .diff-label {
+    display: block;
+    font-family: var(--font-sans);
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--color-text-secondary);
+    margin-bottom: 0.25rem;
+  }
+
   h2 {
-    margin: 0 0 1.25rem;
-    font-size: 1rem;
-    font-weight: 600;
-    color: #e8f5e9;
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: 1.4rem;
+    font-weight: 500;
+    color: var(--color-text-primary);
+  }
+}
+
+.diff-grid {
+  display: flex;
+  flex-direction: column;
+}
+
+.diff-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0;
+  border-bottom: var(--border-subtle);
+
+  &:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
   }
 
-  .diff-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
+  &:first-child {
+    padding-top: 0;
+  }
+}
+
+.diff-name {
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.diff-value {
+  font-family: var(--font-serif);
+  font-size: 1.1rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+
+  &.diff-positive {
+    color: var(--color-primary); // Orange for gains
   }
 
-  .diff-item {
-    display: flex;
-  }
-
-  .diff-value {
-    width: 100%;
-    padding: 0.75rem 1rem;
-    border-radius: 0.75rem;
-    font-size: 0.9rem;
-    font-weight: 600;
-  }
-
-  .diff-positive {
-    background: rgba(129, 199, 132, 0.15);
-    color: #a5d6a7;
-    border: 1px solid rgba(129, 199, 132, 0.3);
-  }
-
-  .diff-negative {
-    background: rgba(239, 83, 80, 0.15);
-    color: #ef9a9a;
-    border: 1px solid rgba(239, 83, 80, 0.3);
+  &.diff-negative {
+    color: var(--color-danger);
   }
 }

@@ -1,36 +1,37 @@
 .dashboard-stat-card {
   container-type: inline-size;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.03);
-  border-radius: 1rem;
-  padding: 1.25rem;
+  background: var(--color-surface);
+  border: var(--border-subtle);
+  border-radius: var(--border-radius-card);
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
   height: 100%;
 
   &:hover {
-    background: rgba(0, 0, 0, 0.3);
-    border-color: rgba(129, 199, 132, 0.2);
     transform: translateY(-2px);
+    box-shadow: var(--shadow-float);
   }
 
   dt {
-    color: #81c784;
-    font-size: 0.8rem;
+    font-family: var(--font-sans);
+    color: var(--color-text-secondary);
+    font-size: 0.75rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.1em;
     margin-bottom: 0.5rem;
   }
 
   dd {
     margin: 0;
     font-size: 1.75rem;
-    font-weight: 700;
-    color: #e8f5e9;
+    font-weight: 500;
+    color: var(--color-text-primary);
     width: 100%;
+    font-family: var(--font-serif);
   }
 }
 
@@ -45,7 +46,7 @@
 
 .stat-val {
   font-variant-numeric: tabular-nums;
-  font-size: clamp(0.85rem, 11cqi, 1.75rem);
+  font-size: clamp(1.2rem, 11cqi, 2rem);
   white-space: nowrap;
 }
 
@@ -54,9 +55,10 @@
   top: -1.5rem;
   right: 0;
   font-size: 0.8rem;
-  font-weight: 700;
-  color: #a5d6a7;
+  font-weight: 600;
+  color: var(--color-primary);
   pointer-events: none;
+  font-family: var(--font-sans);
   animation: float-up-fade 2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
@@ -67,8 +69,6 @@
   100% { opacity: 0; transform: translateY(-10px) scale(0.9); }
 }
 
-
-
 .missing-stat {
   display: flex;
   flex-direction: column;
@@ -78,9 +78,23 @@
 
 .missing-dash {
   font-size: 1.75rem;
-  font-weight: 700;
-  color: #81c784;
-  opacity: 0.3;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  opacity: 0.5;
 }
 
-
+.edit-btn {
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  display: flex;
+  
+  &:hover {
+    background: var(--color-base);
+    color: var(--color-text-primary);
+  }
+}

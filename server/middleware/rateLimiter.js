@@ -7,10 +7,13 @@ const customHandler = (req, res, next, options) => {
   });
 };
 
+const skipFn = () => process.env.DISABLE_RATE_LIMIT === 'true';
+
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: process.env.NODE_ENV === 'production' ? 100 : 1000,
-  handler: customHandler
+  handler: customHandler,
+  skip: skipFn
 });
 
 const authLimiter = rateLimit({
@@ -20,7 +23,8 @@ const authLimiter = rateLimit({
     res.status(options.statusCode).json({
       error: "Too many authentication attempts, please try again after 15 minutes."
     });
-  }
+  },
+  skip: skipFn
 });
 
 const actionLimiter = rateLimit({
@@ -30,7 +34,8 @@ const actionLimiter = rateLimit({
     res.status(options.statusCode).json({
       error: "Too many data modifications, please try again after 15 minutes."
     });
-  }
+  },
+  skip: skipFn
 });
 
 module.exports = {

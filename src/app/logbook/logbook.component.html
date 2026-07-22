@@ -8,7 +8,7 @@
     <div class="pokeball-spinner">
       <div class="pokeball-band"></div>
     </div>
-    <span class="loading-text">Loading entries...</span>
+    <span class="loading-text">Loading chart data...</span>
   </div>
 
   <div *ngIf="!isLoading && velocityStats" class="velocity-section">
@@ -37,7 +37,14 @@
     <app-progress-chart [userHistory]="chartData" [username]="primaryTrainer"></app-progress-chart>
   </div>
 
-  <div class="table-responsive" *ngIf="!isLoading">
+  <div *ngIf="isInitialTableLoad" class="loading-state">
+    <div class="pokeball-spinner">
+      <div class="pokeball-band"></div>
+    </div>
+    <span class="loading-text">Loading entries...</span>
+  </div>
+
+  <div class="table-responsive" *ngIf="!isInitialTableLoad">
     <div class="table-controls">
       <label class="toggle-label">
         <input type="checkbox" [(ngModel)]="showUploadedDate"> 
@@ -70,7 +77,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let row of sortedStats" [class.editing-row]="editingRowId === row.id">
+        <tr *ngFor="let row of stats" [class.editing-row]="editingRowId === row.id">
           <!-- View Mode -->
           <ng-container *ngIf="editingRowId !== row.id">
             <td class="checkbox-cell">
@@ -151,6 +158,9 @@
         </tr>
       </tbody>
     </table>
+    <div #sentinel class="sentinel">
+      <div *ngIf="isTableLoading" class="loading-more">Loading more entries...</div>
+    </div>
   </div>
 </div>
 

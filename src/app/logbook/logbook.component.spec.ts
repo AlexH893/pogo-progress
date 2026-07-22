@@ -36,7 +36,9 @@ describe('LogbookComponent', () => {
     
     // Initial fetch from ngOnInit
     fixture.detectChanges();
-    const req = httpMock.expectOne(`${getApiUrl()}/get-data`);
+    const chartReq = httpMock.expectOne(`${getApiUrl()}/get-chart-data`);
+    chartReq.flush([]);
+    const req = httpMock.expectOne(`${getApiUrl()}/get-data?limit=20&offset=0&sortField=created_at&sortDir=desc`);
     expect(req.request.method).toBe('GET');
     req.flush([{ id: 1, username: 'TestUser', level: 40 }]);
   });
@@ -85,7 +87,9 @@ describe('LogbookComponent', () => {
     putReq.flush({ success: true });
 
     // It should fetch data again after save
-    const getReq = httpMock.expectOne(`${getApiUrl()}/get-data`);
+    const chartReqSave = httpMock.expectOne(`${getApiUrl()}/get-chart-data`);
+    chartReqSave.flush([]);
+    const getReq = httpMock.expectOne(`${getApiUrl()}/get-data?limit=20&offset=0&sortField=created_at&sortDir=desc`);
     getReq.flush([]);
 
     expect(component.editingRowId).toBeNull();
@@ -110,7 +114,9 @@ describe('LogbookComponent', () => {
     deleteReq.flush({ success: true });
 
     // It should fetch data again after delete
-    const getReq = httpMock.expectOne(`${getApiUrl()}/get-data`);
+    const chartReqDel = httpMock.expectOne(`${getApiUrl()}/get-chart-data`);
+    chartReqDel.flush([]);
+    const getReq = httpMock.expectOne(`${getApiUrl()}/get-data?limit=20&offset=0&sortField=created_at&sortDir=desc`);
     getReq.flush([]);
 
     expect(component.pendingDeleteId).toBeNull();
@@ -138,7 +144,7 @@ describe('LogbookComponent', () => {
 
   describe('calculateVelocity', () => {
     it('should calculate velocity for an exact 7 day difference', () => {
-      component.stats = [
+      component.chartData = [
         { created_at: new Date('2023-10-08T10:00:00Z').toISOString(), caught: 200, total_xp: 2000, distance_walked: 20, stop_visited: 100, default_unit: 'km' },
         { created_at: new Date('2023-10-01T10:00:00Z').toISOString(), caught: 100, total_xp: 1000, distance_walked: 10, stop_visited: 50, default_unit: 'km' }
       ];
@@ -154,7 +160,7 @@ describe('LogbookComponent', () => {
     });
 
     it('should fallback to since last upload if no 7 day match is found (e.g. 1 day ago)', () => {
-      component.stats = [
+      component.chartData = [
         { created_at: new Date('2023-10-08T10:00:00Z').toISOString(), caught: 200, total_xp: 2000, distance_walked: 20, stop_visited: 100, default_unit: 'km' },
         { created_at: new Date('2023-10-07T10:00:00Z').toISOString(), caught: 150, total_xp: 1500, distance_walked: 15, stop_visited: 75, default_unit: 'km' }
       ];
@@ -166,7 +172,7 @@ describe('LogbookComponent', () => {
     it('Bug 5: should calculate velocity based on chronological order even if stats array is unsorted', () => {
       // The old array from the test above but backward (oldest first).
       // The component should sort it newest first internally before calculating.
-      component.stats = [
+      component.chartData = [
         { created_at: new Date('2023-10-01T10:00:00Z').toISOString(), caught: 100, total_xp: 1000, distance_walked: 10, stop_visited: 50, default_unit: 'km' },
         { created_at: new Date('2023-10-08T10:00:00Z').toISOString(), caught: 200, total_xp: 2000, distance_walked: 20, stop_visited: 100, default_unit: 'km' }
       ];
@@ -182,7 +188,7 @@ describe('LogbookComponent', () => {
     });
 
     it('should not calculate velocity if less than 2 entries', () => {
-      component.stats = [
+      component.chartData = [
         { created_at: new Date('2023-10-08T10:00:00Z').toISOString(), caught: 200, total_xp: 2000, distance_walked: 20, stop_visited: 100, default_unit: 'km' }
       ];
       component.calculateVelocity();
@@ -298,7 +304,9 @@ describe('LogbookComponent', () => {
       deleteReq.flush({ success: true });
 
       // Drain the follow-up GET
-      const getReq = httpMock.expectOne(`${getApiUrl()}/get-data`);
+      const chartReqDel2 = httpMock.expectOne(`${getApiUrl()}/get-chart-data`);
+      chartReqDel2.flush([]);
+      const getReq = httpMock.expectOne(`${getApiUrl()}/get-data?limit=20&offset=0&sortField=created_at&sortDir=desc`);
       getReq.flush([]);
 
       expect(mockToastService.show).not.toHaveBeenCalled();
@@ -340,7 +348,9 @@ describe('LogbookComponent', () => {
       // The previous row's save PUT should have fired
       const putReq = httpMock.expectOne(`${getApiUrl()}/update-data/1`);
       putReq.flush({ success: true });
-      const getReq = httpMock.expectOne(`${getApiUrl()}/get-data`);
+      const chartReqEdit = httpMock.expectOne(`${getApiUrl()}/get-chart-data`);
+      chartReqEdit.flush([]);
+      const getReq = httpMock.expectOne(`${getApiUrl()}/get-data?limit=20&offset=0&sortField=created_at&sortDir=desc`);
       getReq.flush([]);
 
       // Inline cell must be gone regardless

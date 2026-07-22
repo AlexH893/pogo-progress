@@ -6,10 +6,16 @@ module.exports = {
   set: (key, val) => apiCache.set(key, val),
   del: (key) => apiCache.del(key),
   invalidateUser: (googleId, usernames) => {
-    if (googleId) apiCache.del(`getData_${googleId}`);
+    const keys = apiCache.keys();
+    if (googleId) {
+      keys.forEach(k => {
+        if (k.startsWith(`getData_${googleId}`) || k.startsWith(`getChartData_${googleId}`)) {
+          apiCache.del(k);
+        }
+      });
+    }
     if (usernames) {
       const uArr = Array.isArray(usernames) ? usernames : [usernames];
-      const keys = apiCache.keys();
       uArr.forEach(u => {
         keys.forEach(k => {
           if (k.startsWith(`getUserStats_${u}`)) apiCache.del(k);

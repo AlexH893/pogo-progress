@@ -11,10 +11,10 @@ class StatsRepository {
     return allStats.length > 0;
   }
 
-  async insertStat(username, level, distanceWalked, caught, stopVisited, totalXp, entryName, insertDate) {
+  async insertStat(username, level, distanceWalked, caught, stopVisited, totalXp, entryName, insertDate, uploadedAt = null) {
     const [result] = await db.execute(
-      'INSERT INTO stats (username, level, distance_walked, caught, stop_visited, total_xp, entry_name, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [username, level, distanceWalked, caught, stopVisited, totalXp, entryName, insertDate]
+      'INSERT INTO stats (username, level, distance_walked, caught, stop_visited, total_xp, entry_name, created_at, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))',
+      [username, level, distanceWalked, caught, stopVisited, totalXp, entryName, insertDate, uploadedAt]
     );
     return result.insertId;
   }
@@ -43,12 +43,64 @@ class StatsRepository {
   }
 
   async getStatsByGoogleId(googleId) {
-    const [rows] = await db.execute('SELECT stats.*, users.google_id, users.default_unit FROM stats LEFT JOIN users ON stats.username = users.username WHERE users.google_id = ? AND stats.is_deleted = 0 AND users.is_deleted = 0 ORDER BY stats.created_at DESC', [googleId]);
+    const [userRows] = await db.execute('SELECT username, google_id, default_unit FROM users WHERE google_id = ? AND is_deleted = 0', [googleId]);
+    if (userRows.length === 0) return [];
+
+    const usernames = userRows.map(u => u.username);
+    const placeholders = usernames.map(() => '?').join(',');
+
+    const [rows] = await db.execute(`SELECT stats.* FROM stats WHERE username IN (${placeholders}) AND is_deleted = 0 ORDER BY created_at DESC`, usernames);
+
+    const userMap = {};
+    for (const u of userRows) {
+      userMap[u.username] = { google_id: u.google_id, default_unit: u.default_unit };
+    }
+    for (const row of rows) {
+      row.google_id = userMap[row.username].google_id;
+      row.default_unit = userMap[row.username].default_unit;
+    }
+    return rows;
+  }
+
+  async getPaginatedStatsByGoogleId(googleId, limit, offset, sortField = 'created_at', sortDir = 'desc') {
+    const allowedSortFields = ['created_at', 'uploaded_at'];
+    const actualSortField = allowedSortFields.includes(sortField) ? sortField : 'created_at';
+    const actualSortDir = (sortDir || 'desc').toLowerCase() === 'asc' ? 'ASC' : 'DESC';
+    const parsedLimit = parseInt(limit, 10) || 50;
+    const parsedOffset = parseInt(offset, 10) || 0;
+
+    const [userRows] = await db.execute('SELECT username, google_id, default_unit FROM users WHERE google_id = ? AND is_deleted = 0', [googleId]);
+    if (userRows.length === 0) return [];
+
+    const usernames = userRows.map(u => u.username);
+    const placeholders = usernames.map(() => '?').join(',');
+
+    const [rows] = await db.execute(`SELECT stats.* FROM stats WHERE username IN (${placeholders}) AND is_deleted = 0 ORDER BY ${actualSortField} ${actualSortDir} LIMIT ${parsedLimit} OFFSET ${parsedOffset}`, usernames);
+
+    const userMap = {};
+    for (const u of userRows) {
+      userMap[u.username] = { google_id: u.google_id, default_unit: u.default_unit };
+    }
+    for (const row of rows) {
+      row.google_id = userMap[row.username].google_id;
+      row.default_unit = userMap[row.username].default_unit;
+    }
     return rows;
   }
 
   async getStatsByUsername(username) {
     const [rows] = await db.execute('SELECT id, username, level, distance_walked, caught, stop_visited, total_xp, entry_name, created_at FROM stats WHERE username = ? AND is_deleted = 0 ORDER BY created_at ASC', [username]);
+    return rows;
+  }
+
+  async getPaginatedStatsByUsername(username, limit, offset, sortField = 'created_at', sortDir = 'desc') {
+    const allowedSortFields = ['created_at', 'uploaded_at'];
+    const actualSortField = allowedSortFields.includes(sortField) ? sortField : 'created_at';
+    const actualSortDir = (sortDir || 'desc').toLowerCase() === 'asc' ? 'ASC' : 'DESC';
+    const parsedLimit = parseInt(limit, 10) || 50;
+    const parsedOffset = parseInt(offset, 10) || 0;
+
+    const [rows] = await db.execute(`SELECT id, username, level, distance_walked, caught, stop_visited, total_xp, entry_name, created_at FROM stats WHERE username = ? AND is_deleted = 0 ORDER BY ${actualSortField} ${actualSortDir} LIMIT ${parsedLimit} OFFSET ${parsedOffset}`, [username]);
     return rows;
   }
 

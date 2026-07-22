@@ -110,67 +110,127 @@ function parseUsername(text: string): string | null {
   return null;
 }
 
+function cleanDigitCandidate(raw: string): number | null {
+  // Strip common trailing/leading OCR noise like '>', '<', '|', ':', '.', ',', '~', '#', '$'
+  const cleaned = raw.replace(/^[^0-9a-zA-Z]+|[^0-9a-zA-Z]+$/g, '').trim();
+  
+  // Try direct numeric parse
+  const directDigits = cleaned.replace(/[^0-9]/g, '');
+  if (directDigits.length >= 1 && directDigits.length <= 3) {
+    const level = parseInt(directDigits, 10);
+    if (isValidTrainerLevel(level)) {
+      return level;
+    }
+  }
+
+  // Common OCR letter-to-digit confusions near level label (e.g. "BO" -> 80, "8O" -> 80, "B0" -> 80, "SO" -> 80)
+  if (cleaned.length >= 1 && cleaned.length <= 3) {
+    const substituted = cleaned
+      .toUpperCase()
+      .replace(/B/g, '8')
+      .replace(/O/g, '0')
+      .replace(/S/g, '8')
+      .replace(/Z/g, '2')
+      .replace(/G/g, '6')
+      .replace(/I|L|T/g, '1');
+    
+    const subDigits = substituted.replace(/[^0-9]/g, '');
+    if (subDigits.length >= 1 && subDigits.length <= 3) {
+      const level = parseInt(subDigits, 10);
+      if (isValidTrainerLevel(level)) {
+        return level;
+      }
+    }
+  }
+
+  return null;
+}
+
 function parseLevelNearKeyword(text: string): number | null {
   const activityIndex = text.search(/total\s*activity/i);
   const headerText =
     activityIndex >= 0 ? text.slice(0, activityIndex) : text.slice(0, 2500);
 
+  // Match "80" (or "80 >") on line above "LEVEL" (or OCR typos like "LEVE1", "LEVEI", "LEVL")
   const numberAboveLabel = headerText.match(
-    /(?:^|\n)\s*(\d{1,3})[^\n]*\r?\n\s*level\b/im,
+    /(?:^|\n)\s*([0-9a-zA-Z]{1,4})\s*(?:>|\||:|\.)?[^\n]*\r?\n\s*(?:level|leve1|levei|levl|l\.?evel|leuel)\b/im,
   );
   if (numberAboveLabel) {
-    const level = parseLevelCandidate(numberAboveLabel[1]);
+    const level = cleanDigitCandidate(numberAboveLabel[1]);
     if (level !== null) {
       return level;
     }
   }
 
   const lines = headerText.split(/\r?\n/);
+  const LEVEL_KEYWORD_REGEX = /\b(?:level|leve1|levei|levl|l\.?evel|leuel|level>)\b/i;
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    if (!/\blevel\b/i.test(line)) {
+    if (!LEVEL_KEYWORD_REGEX.test(line)) {
       continue;
     }
 
     if (!isXpProgressLine(line)) {
-      const leadingNumber = line.match(/^\s*(\d{1,3})\s+level\b/i);
+      // Same line: "80 LEVEL" or "80 > LEVEL" or "80 LEVEL >"
+      const leadingNumber = line.match(/^\s*([0-9a-zA-Z]{1,4})\s*(?:>|\||:|\.)?\s*(?:level|leve1|levei|levl|l\.?evel|leuel)\b/i);
       if (leadingNumber) {
-        const level = parseLevelCandidate(leadingNumber[1]);
+        const level = cleanDigitCandidate(leadingNumber[1]);
         if (level !== null) {
           return level;
         }
       }
 
-      const levelWordFirst = line.match(/\blevel\s*[:\s]*(\d{1,3})\b/i);
+      // Same line: "LEVEL 80" or "LEVEL: 80" or "LEVEL 80 >"
+      const levelWordFirst = line.match(/\b(?:level|leve1|levei|levl|l\.?evel|leuel)\b\s*[:\s>|.]*([0-9a-zA-Z]{1,4})/i);
       if (levelWordFirst) {
-        const level = parseLevelCandidate(levelWordFirst[1]);
+        const level = cleanDigitCandidate(levelWordFirst[1]);
         if (level !== null) {
           return level;
         }
       }
     }
 
-    for (let j = 1; j <= 4; j++) {
-      const candidateLine = lines[i - j];
+    // Look at candidate lines above or below the "LEVEL" keyword line
+    const searchOffsets = [-1, -2, -3, -4, 1, 2];
+    for (const offset of searchOffsets) {
+      const candidateLine = lines[i + offset];
       if (!candidateLine || isXpProgressLine(candidateLine)) {
         continue;
       }
-      const standalone = candidateLine.trim().match(/^(\d{1,3})$/);
-      if (standalone) {
-        const level = parseLevelCandidate(standalone[1]);
-        if (level !== null) {
-          return level;
-        }
+      // Skip lines with dates or distances or huge XP numbers
+      if (/\b(?:km|mi|miles?|date|start|xp)\b/i.test(candidateLine)) {
+        continue;
+      }
+      const level = cleanDigitCandidate(candidateLine.trim());
+      if (level !== null) {
+        return level;
       }
     }
   }
 
   // Check for "Unlock these rewards and more at level X"
-  const unlockMatch = text.match(/unlock\s+(?:these\s+)?rewards.*at\s+level\s+(\d{1,3})/i);
+  const unlockMatch = text.match(/unlock\s+(?:these\s+)?rewards.*at\s+(?:level|leve1|levei)\s+([0-9a-zA-Z]{1,4})/i);
   if (unlockMatch) {
-    const level = parseLevelCandidate(unlockMatch[1]);
+    const level = cleanDigitCandidate(unlockMatch[1]);
     if (level !== null) {
       return level - 1;
+    }
+  }
+
+  // Check for standalone number above BUDDY / SCRAPBOOK / JOURNAL / STYLE
+  const buddyIndex = headerText.search(/\b(?:buddy|scrapbook|journal|style)\b/i);
+  if (buddyIndex >= 0) {
+    const linesAbove = headerText.slice(0, buddyIndex).split(/\r?\n/).slice(-8);
+    for (let i = linesAbove.length - 1; i >= 0; i--) {
+      const line = linesAbove[i].trim();
+      if (!line || isXpProgressLine(line) || /\b(?:km|mi|miles?|date|start|xp)\b/i.test(line)) {
+        continue;
+      }
+      const level = cleanDigitCandidate(line);
+      if (level !== null) {
+        return level;
+      }
     }
   }
 
