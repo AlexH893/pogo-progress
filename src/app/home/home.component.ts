@@ -425,8 +425,10 @@ export class HomeComponent implements OnInit, OnDestroy {
         hasChanged = true;
       }
     } else if (field === 'entryName') {
-      this.stats.entryName = value;
-      hasChanged = true;
+      if (value !== (this.stats.entryName ?? '')) {
+        this.stats.entryName = value;
+        hasChanged = true;
+      }
     } else if (field === 'createdAt' as any) {
       const parsedDate = new Date(value);
       if (!Number.isNaN(parsedDate.getTime())) {
@@ -535,10 +537,38 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   calculateDiffs(animate: boolean = true): void {
-    if (!this.stats || !this.previousStats || this.isStardustOnlyUpload) {
+    if (!this.stats || !this.previousStats) {
       this.statDiffs = null;
       this.dailyAverages = null;
       this.diffDays = 0;
+      return;
+    }
+
+    // Stardust-only uploads: only compute the stardust diff, skip profile metrics
+    if (this.isStardustOnlyUpload) {
+      if (
+        this.stats.stardust != null &&
+        this.previousStats.stardust != null
+      ) {
+        const stardustDiff = (this.stats.stardust || 0) - (this.previousStats.stardust || 0);
+        if (stardustDiff !== 0) {
+          this.statDiffs = { level: 0, distanceWalked: 0, pokemonCaught: 0, pokestopsVisited: 0, totalXp: 0, stardust: stardustDiff };
+          const now = this.screenshotDate ? this.screenshotDate.getTime() : Date.now();
+          const prevDate = new Date(this.previousStats.created_at).getTime();
+          this.diffDays = Math.max((now - prevDate) / (1000 * 60 * 60 * 24), 0);
+          this.dailyAverages = this.diffDays >= 1
+            ? { level: 0, distanceWalked: 0, pokemonCaught: 0, pokestopsVisited: 0, totalXp: 0, stardust: stardustDiff / this.diffDays }
+            : null;
+        } else {
+          this.statDiffs = null;
+          this.dailyAverages = null;
+          this.diffDays = 0;
+        }
+      } else {
+        this.statDiffs = null;
+        this.dailyAverages = null;
+        this.diffDays = 0;
+      }
       return;
     }
 
@@ -552,7 +582,6 @@ export class HomeComponent implements OnInit, OnDestroy {
     if (this.stats.stardust !== null && this.stats.stardust !== undefined && this.previousStats.stardust !== null && this.previousStats.stardust !== undefined) {
       diffs.stardust = (this.stats.stardust || 0) - (this.previousStats.stardust || 0);
     }
-    
 
     if (
       diffs.level !== 0 ||

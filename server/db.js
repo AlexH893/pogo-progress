@@ -32,10 +32,17 @@ pool.query = async function (sql, params) {
       await pool.query("ALTER TABLE stats ADD COLUMN stardust BIGINT NULL AFTER total_xp");
       console.log("Migration: Added 'stardust' column to 'stats' table.");
     }
-    // Clean up existing Stardust entries where zeroes were saved instead of NULL
-    await pool.query(
-      "UPDATE stats SET distance_walked = NULL, caught = NULL, total_xp = NULL WHERE stardust IS NOT NULL AND level IS NULL AND (caught = 0 OR distance_walked = 0 OR total_xp = 0)"
+    // Clean up existing Stardust entries where zeroes were saved instead of NULL.
+    // Guard with a COUNT first so we don't run a write on every boot once data is clean.
+    const [[{ dirtyCount }]] = await pool.query(
+      "SELECT COUNT(*) AS dirtyCount FROM stats WHERE stardust IS NOT NULL AND level IS NULL AND (caught = 0 OR distance_walked = 0 OR total_xp = 0)"
     );
+    if (dirtyCount > 0) {
+      await pool.query(
+        "UPDATE stats SET distance_walked = NULL, caught = NULL, total_xp = NULL WHERE stardust IS NOT NULL AND level IS NULL AND (caught = 0 OR distance_walked = 0 OR total_xp = 0)"
+      );
+      console.log(`Migration: Nullified zeroes on ${dirtyCount} stardust-only stat row(s).`);
+    }
   } catch (err) {
     // If schema query fails or column exists, ignore
     console.warn("Migration check for stardust column:", err.message);
