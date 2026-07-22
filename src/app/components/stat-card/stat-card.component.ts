@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, ChangeDetectorRef, ElementRef, OnInit, OnDestroy, ViewChild } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ChangeDetectorRef, ElementRef, OnInit, OnDestroy, ViewChild, HostListener } from '@angular/core';
 
 @Component({
   selector: 'app-stat-card',
@@ -22,11 +22,39 @@ export class StatCardComponent implements OnInit, OnDestroy {
 
   @ViewChild('statValueEl', { static: true }) statValueEl!: ElementRef;
 
+  private valInputEl: ElementRef<HTMLInputElement> | null = null;
+  @ViewChild('valInput') set valInput(content: ElementRef<HTMLInputElement> | null) {
+    if (content) {
+      this.valInputEl = content;
+      setTimeout(() => {
+        if (content.nativeElement) {
+          content.nativeElement.focus();
+          content.nativeElement.select();
+        }
+      }, 0);
+    } else {
+      this.valInputEl = null;
+    }
+  }
+
   animatedDisplayValue: string = '0';
   private observer: IntersectionObserver | null = null;
   private hasAnimated: boolean = false;
+  private editOpenedAt: number = 0;
 
   constructor(private cdr: ChangeDetectorRef, private el: ElementRef) {}
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (!this.isEditing) return;
+    // Ignore clicks that happened within 50ms of opening edit mode (the same click that opened it)
+    if (Date.now() - this.editOpenedAt < 50) return;
+    const target = event.target as HTMLElement;
+    if (target && !this.el.nativeElement.contains(target)) {
+      const val = this.valInputEl ? this.valInputEl.nativeElement.value : (this.value !== null && this.value !== undefined ? String(this.value) : '');
+      this.submitCorrection(val);
+    }
+  }
 
   ngOnInit() {
     this.animatedDisplayValue = this.displayValue; // Fallback
@@ -82,6 +110,9 @@ export class StatCardComponent implements OnInit, OnDestroy {
 
   toggleEdit(): void {
     this.isEditing = !this.isEditing;
+    if (this.isEditing) {
+      this.editOpenedAt = Date.now();
+    }
     this.isEditingChange.emit(this.isEditing);
     this.cdr.detectChanges();
   }
