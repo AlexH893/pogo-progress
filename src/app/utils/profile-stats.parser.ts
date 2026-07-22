@@ -487,11 +487,14 @@ function parseTotalXp(text: string): number | null {
 
   return parseTotalXpFromText(text, false);
 }
-function parseStardust(text: string): number | null {
-  if (!/\b(?:stardust|star\s*dust|5tardust|siardust)\b/i.test(text)) {
-    return null;
-  }
+export function isPokemonDetailScreen(text: string): boolean {
+  const upper = text.toUpperCase();
+  const hasPokemonKeywords = /STARDUST|CANDY|POWER\s*UP|WEIGHT|HEIGHT|\bHP\b|GYMS|RAIDS|TRAINER\s*BATTLES/.test(upper);
+  const hasProfileKeywords = /TOTAL\s*ACTIVITY|DISTANCE\s*WALKED/.test(upper);
+  return hasPokemonKeywords && !hasProfileKeywords;
+}
 
+function parseStardust(text: string): number | null {
   // 1. Number above "STARDUST" label (as seen on Pokémon inspection screens: "5,163,855 \n STARDUST")
   const numberAboveLabel = text.match(
     /(?:^|\n)\s*([\d,.]{1,12})[^\n]*\r?\n\s*(?:stardust|star\s*dust|5tardust|siardust|sta\s*rdust)\b/im
@@ -521,14 +524,32 @@ function parseStardust(text: string): number | null {
     }
   }
 
+  // 4. Fallback for Pokémon Detail screen where OCR might misread or miss the STARDUST label text
+  if (isPokemonDetailScreen(text)) {
+    const lines = text.split(/\r?\n/);
+    for (const line of lines) {
+      if (/POWER\s*UP|WEIGHT|HEIGHT|\bHP\b|GYMS|RAIDS|BATTLES/i.test(line)) {
+        continue;
+      }
+      const match = line.match(/([\d,.]{4,12})/);
+      if (match) {
+        const val = parseInteger(match[1]);
+        if (!Number.isNaN(val) && val > 0 && val < 100_000_000) {
+          return val;
+        }
+      }
+    }
+  }
+
   return null;
 }
 
 export function parseProfileStats(text: string): ProfileStats | null {
+  const isPokemonDetail = isPokemonDetailScreen(text);
   const stardust = parseStardust(text);
 
-  // If Stardust is detected, this is a Pokémon Detail / Stardust screenshot
-  if (stardust !== null) {
+  // If Stardust is detected OR this is a Pokémon Detail screenshot:
+  if (stardust !== null || isPokemonDetail) {
     return {
       level: null,
       distanceWalked: null,

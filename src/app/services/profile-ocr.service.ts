@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { ProfileStats, ProfileOcrResult } from '../models/profile-stats';
-import { parseProfileStats } from '../utils/profile-stats.parser';
+import { parseProfileStats, isPokemonDetailScreen } from '../utils/profile-stats.parser';
 
 declare const cv: any;
 
@@ -65,8 +65,9 @@ export class ProfileOcrService {
       const fullBinarizedText = fullBinarizedResult.text;
 
       const upperText = fullBinarizedText.toUpperCase();
-      const hasEnglishLabels = /TOTAL ACTIVITY|DISTANCE WALKED|CAUGHT|VISITED|POKEMON|POKESTOP|STARDUST/.test(upperText);
-      const hasBasicProfileIndicators = /LEVEL|XP|STARDUST|\d{1,3},\d{3}/.test(upperText) || upperText.includes('/');
+      const isPokemonDetail = isPokemonDetailScreen(fullBinarizedText);
+      const hasEnglishLabels = /TOTAL ACTIVITY|DISTANCE WALKED|CAUGHT|VISITED|POKEMON|POKESTOP|STARDUST|CANDY|POWER\s*UP|WEIGHT|HEIGHT/.test(upperText);
+      const hasBasicProfileIndicators = /LEVEL|XP|STARDUST|CANDY|POWER\s*UP|WEIGHT|HEIGHT|\d{1,3},\d{3}/.test(upperText) || upperText.includes('/');
 
       if (!hasBasicProfileIndicators && !hasEnglishLabels) {
         throw new InvalidScreenshotError('This does not appear to be a Pokémon GO trainer profile or Pokémon detail screenshot. Please ensure you upload a valid screenshot.', fullBinarizedText);
@@ -77,7 +78,7 @@ export class ProfileOcrService {
       }
 
       const stardustStats = parseProfileStats(fullBinarizedText);
-      if (stardustStats && stardustStats.stardust != null) {
+      if (stardustStats && (stardustStats.stardust != null || isPokemonDetail)) {
         return { stats: stardustStats, rawText: fullBinarizedText };
       }
 

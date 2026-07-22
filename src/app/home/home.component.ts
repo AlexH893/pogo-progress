@@ -14,6 +14,7 @@ import { getApiUrl } from '../config';
 import { AuthService } from '../services/auth.service';
 import exifr from 'exifr';
 import { levenshtein } from '../utils/levenshtein';
+import { isPokemonDetailScreen } from '../utils/profile-stats.parser';
 
 type PageState = 'idle' | 'processing' | 'success' | 'error';
 
@@ -262,12 +263,17 @@ export class HomeComponent implements OnInit, OnDestroy {
 
     try {
       const result = await this.profileOcr.extractFromFile(file);
-      let extractedUsername = result.stats.username || this.knownTrainerName || this.username;
-      const isStardustOnly = result.stats.stardust !== undefined && 
-                             result.stats.stardust !== null && 
-                             result.stats.level === null && 
-                             result.stats.distanceWalked === null && 
-                             result.stats.totalXp === null;
+      const isStardustOnly = isPokemonDetailScreen(result.rawText) || (
+        result.stats.stardust !== undefined && 
+        result.stats.stardust !== null && 
+        result.stats.level === null && 
+        result.stats.distanceWalked === null && 
+        result.stats.totalXp === null
+      );
+
+      let extractedUsername = isStardustOnly
+        ? (this.knownTrainerName || this.username)
+        : (result.stats.username || this.knownTrainerName || this.username);
 
       if (isStardustOnly && !extractedUsername) {
         throw new InvalidScreenshotError('Please upload a Trainer Profile screenshot first so we know which profile to link your Stardust to!', result.rawText);
@@ -298,7 +304,7 @@ export class HomeComponent implements OnInit, OnDestroy {
           if (userPref) {
             this.knownTrainerName = userPref.username;
 
-            if (this.knownTrainerName && this.username !== this.knownTrainerName) {
+            if (this.knownTrainerName && this.username !== this.knownTrainerName && !isStardustOnly) {
               const editDist = levenshtein(this.username, this.knownTrainerName);
 
               if (editDist <= 1) {
