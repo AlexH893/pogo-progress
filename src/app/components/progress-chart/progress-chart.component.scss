@@ -1,45 +1,52 @@
 .progress-chart-container {
   padding: 1.5rem;
+  background: var(--color-surface);
+  border-radius: var(--border-radius-card);
 
   .chart-title {
     margin: 0 0 1.5rem 0;
-    font-size: 1.1rem;
-    font-weight: 600;
+    font-size: 1.25rem;
+    font-weight: 500;
+    font-family: var(--font-serif);
+    color: var(--color-text-primary);
   }
 
   .chart-tabs {
     display: flex;
     gap: 0.5rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 2rem;
     flex-wrap: wrap;
 
     .chart-tab {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      color: rgba(232, 245, 233, 0.7);
-      padding: 0.4rem 1rem;
-      border-radius: 2rem;
+      background: var(--color-base);
+      border: var(--border-subtle);
+      color: var(--color-text-secondary);
+      padding: 0.5rem 1rem;
+      border-radius: var(--border-radius-pill);
       font-size: 0.85rem;
       font-weight: 500;
       cursor: pointer;
       transition: all 0.2s ease;
+      font-family: var(--font-sans);
 
       &:hover {
-        background: rgba(255, 255, 255, 0.1);
-        color: #fff;
+        background: rgba(0,0,0,0.02);
+        color: var(--color-text-primary);
+        border-color: var(--color-text-secondary);
       }
 
       &.active {
-        background: rgba(129, 199, 132, 0.15);
-        border-color: rgba(129, 199, 132, 0.3);
-        color: #a5d6a7;
+        background: var(--color-primary);
+        border-color: var(--color-primary);
+        color: white;
+        box-shadow: var(--shadow-soft);
       }
     }
   }
 
   .canvas-wrapper {
     position: relative;
-    height: 300px;
+    height: 350px;
     width: 100%;
   }
 }

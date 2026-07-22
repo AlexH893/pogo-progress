@@ -1,4 +1,5 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import exifr from 'exifr';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { ProfileOcrService, ProfileOcrParseError, InvalidScreenshotError, OcrTimeoutError } from '../services/profile-ocr.service';
 import { HomeComponent } from './home.component';
@@ -266,6 +267,163 @@ describe('HomeComponent', () => {
       req.flush({ error: 'Server error' }, { status: 500, statusText: 'Server Error' });
       
       expect(component.errorMessage).toBe('Network error: Failed to save correction. Please try again.');
+    });
+  });
+
+  describe('Formatting Utilities', () => {
+    it('should format distance correctly', () => {
+      expect(component.formatDistance({ distanceWalked: 123.456, distanceUnit: 'km' } as any)).toBe('123.5 km');
+      expect(component.formatDistance({ distanceWalked: 123.4, distanceUnit: 'mi' } as any)).toBe('123.4 mi');
+      expect(component.formatDistance({ distanceWalked: null } as any)).toBe('—');
+    });
+
+    it('should format count correctly', () => {
+      expect(component.formatCount(123456)).toBe('123,456');
+      expect(component.formatCount(null)).toBe('—');
+    });
+
+    it('should format diffs correctly', () => {
+      expect(component.formatDiffCount(100)).toBe('+100');
+      expect(component.formatDiffCount(-50)).toBe('-50');
+      expect(component.formatDiffCount(0)).toBe('');
+      
+      expect(component.formatDiffDistance(1.23)).toBe('+1.2');
+      expect(component.formatDiffDistance(-1.23)).toBe('-1.2');
+      expect(component.formatDiffDistance(0)).toBe('');
+    });
+  });
+
+  describe('processFile success path', () => {
+    let mockOcrService: jasmine.SpyObj<any>;
+
+    beforeEach(() => {
+      mockOcrService = TestBed.inject(ProfileOcrService) as any;
+    });
+
+    it('should handle a successful file extraction and load preferences', fakeAsync(() => {
+
+      const mockFile = new File([''], 'test.png', { type: 'image/png', lastModified: new Date('2024-01-01').getTime() });
+      const stats = { username: 'Trainer123', level: 40 };
+      mockOcrService.extractFromFile.and.returnValue(Promise.resolve({ stats, rawText: 'text' }));
+      spyOn(component.authService, 'getToken').and.returnValue('mock-token');
+      
+      // We don't await because processFile uses view transitions, so we just run it and let it finish.
+      // But we can await it if we mock startViewTransition.
+      (document as any).startViewTransition = jasmine.createSpy('startViewTransition').and.callFake((cb: any) => cb());
+      
+      component.processFile(mockFile);
+      
+      tick(100);
+      
+      const prefReq = httpMock.expectOne(`${getApiUrl()}/user-preferences`);
+      prefReq.flush([{ username: 'Trainer123', default_unit: 'km', show_fun_facts: true, display_tutorial: true }]);
+      
+      tick();
+      
+      const postReq = httpMock.expectOne(`${getApiUrl()}/post-data`);
+      postReq.flush({ success: true });
+      
+      const statsReq = httpMock.expectOne(`${getApiUrl()}/get-user-stats/Trainer123`);
+      statsReq.flush([{ level: 39 }]);
+      expect(component.state).toBe('success');
+      expect(component.username).toBe('Trainer123');
+      expect(component.stats).toEqual(jasmine.objectContaining({ level: 40 }));
+      expect(component.showFunFactsEnabled).toBeTrue();
+    }));
+    
+    it('should detect a mismatched username and ask for confirmation', fakeAsync(() => {
+      
+      const mockFile = new File([''], 'test.png', { type: 'image/png' });
+      const stats = { username: 'OcrTypoName', level: 40 };
+      mockOcrService.extractFromFile.and.returnValue(Promise.resolve({ stats, rawText: 'text' }));
+      spyOn(component.authService, 'getToken').and.returnValue('mock-token');
+      
+      (document as any).startViewTransition = jasmine.createSpy('startViewTransition').and.callFake((cb: any) => cb());
+      
+      component.processFile(mockFile);
+tick(100);
+      
+      const prefReq = httpMock.expectOne(`${getApiUrl()}/user-preferences`);
+      // User is linked to "Trainer123", but OCR returned "OcrTypoName"
+      prefReq.flush([{ username: 'Trainer123', default_unit: 'km', show_fun_facts: true }]);
+      
+      tick();
+      
+      expect(component.usernameMismatch).toBeTrue();
+      expect(component.ocrUsername).toBe('OcrTypoName');
+      expect(component.editingFields.username).toBeTrue();
+      // Should NOT post stats automatically if mismatched
+      httpMock.expectNone(`${getApiUrl()}/post-data`);
+    }));
+  });
+  describe('Additional Coverage', () => {
+    it('should handle dismissError', () => {
+      component.state = 'error';
+      component.errorMessage = 'test error';
+      component.dismissError();
+      expect(component.state).toBe('idle');
+      expect(component.errorMessage).toBe('');
+    });
+
+    it('should handle upload error', () => {
+      component.handleUploadError('bad file');
+      expect(component.state).toBe('error');
+      expect(component.errorMessage).toBe('bad file');
+    });
+
+    it('should toggle debug', () => {
+      component.showDebug = false;
+      component.toggleDebug();
+      expect(component.showDebug).toBeTrue();
+    });
+
+    it('should run demo and reset demo', fakeAsync(() => {
+      component.runDemo();
+      tick(100);
+      expect(component.demoCursorX).toBe(window.innerWidth / 2);
+      tick(15000); // clear all demo timeouts
+      expect(component.isDemoActive).toBeFalse();
+      component.resetDemo();
+      expect(component.state).toBe('idle');
+    }));
+
+    it('should format distance correctly', () => {
+      expect(component.formatDistance({ distanceWalked: 100.5, distanceUnit: 'km' } as any)).toBe('100.5 km');
+      expect(component.formatDistance({ distanceWalked: null } as any)).toBe('—');
+    });
+
+    it('should format count correctly', () => {
+      expect(component.formatCount(1000)).toBe('1,000');
+      expect(component.formatCount(null)).toBe('—');
+    });
+
+    it('should handle processFile with profile-ocr failing', fakeAsync(() => {
+      const mockFile = new File([''], 'test.png', { type: 'image/png' });
+      const ocrService = TestBed.inject(ProfileOcrService) as any;
+      ocrService.extractFromFile.and.returnValue(Promise.reject(new Error('OCR Failed')));
+      
+      component.processFile(mockFile);
+      tick(100);
+      
+      expect(component.state).toBe('error');
+      expect(component.errorMessage).toContain('OCR Failed');
+    }));
+
+    it('should handle submitCorrection for fields', () => {
+      component.stats = { level: 40, distanceWalked: 100 } as any;
+      component.username = 'OldName';
+      
+      component.submitCorrection('distanceWalked', '200.5');
+      expect(component.stats!.distanceWalked).toBe(200.5);
+
+      component.usernameMismatch = true;
+      component.submitCorrection('username', 'FixedName');
+      expect(component.stats?.username).toBe('FixedName');
+      expect(component.username).toBe('FixedName');
+      expect(component.usernameMismatch).toBeFalse();
+
+      component.submitCorrection('level', '45');
+      expect(component.stats?.level).toBe(45);
     });
   });
 });

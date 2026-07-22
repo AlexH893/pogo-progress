@@ -8,16 +8,18 @@ const statsSchema = Joi.object({
   stopVisited: Joi.number().integer().min(0).max(99999999).allow(null, ''),
   totalXp: Joi.number().integer().min(0).max(2000000000).allow(null, ''),
   entryName: Joi.string().trim().regex(/^[a-zA-Z0-9\s\-_!?.,()/'"]+$/).message('"entryName" must only contain standard text characters').max(100).allow(null, ''),
-  createdAt: Joi.alternatives().try(Joi.date().iso(), Joi.string(), Joi.date()).allow(null, '')
+  createdAt: Joi.alternatives().try(Joi.date().iso(), Joi.string(), Joi.date()).allow(null, ''),
+  uploadedAt: Joi.alternatives().try(Joi.date().iso(), Joi.string(), Joi.date()).allow(null, '')
 });
 
 const validateStats = (req, res, next) => {
-  const { error } = statsSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
+  const { error, value } = statsSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
   if (error) {
     const messages = error.details.map(d => d.message).join(', ');
     console.error(`Validation error (Stats): ${messages}`);
     return res.status(400).json({ error: `Validation error: ${messages}` });
   }
+  req.body = value;
   next();
 };
 
@@ -28,12 +30,13 @@ const preferencesSchema = Joi.object({
 });
 
 const validatePreferences = (req, res, next) => {
-  const { error } = preferencesSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
+  const { error, value } = preferencesSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
   if (error) {
     const messages = error.details.map(d => d.message).join(', ');
     console.error(`Validation error (Preferences): ${messages}`);
     return res.status(400).json({ error: `Validation error: ${messages}` });
   }
+  req.body = value;
   next();
 };
 

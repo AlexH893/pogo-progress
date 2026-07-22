@@ -92,8 +92,16 @@ export class ProfileOcrService {
       }
 
       // Generate focused crops using dynamic ratio
-      const headerCanvas = this.cropCanvas(rawCanvas, 0, 0.08, 1, 0.54);
+      const headerHeightRatio = Math.max(0.54, activityYRatio - 0.05);
+      const headerCanvas = this.cropCanvas(rawCanvas, 0, 0.05, 1, headerHeightRatio);
       this.binarize(headerCanvas);
+
+      // Dedicated crop for Level area (middle left) - both binarized and raw to handle yellow-on-light font contrast
+      const levelStartY = Math.max(0.30, activityYRatio - 0.35);
+      const levelHeight = Math.max(0.30, activityYRatio - levelStartY);
+      const levelCanvas = this.cropCanvas(rawCanvas, 0, levelStartY, 0.55, levelHeight);
+      const rawLevelCanvas = this.cropCanvas(rawCanvas, 0, levelStartY, 0.55, levelHeight);
+      this.binarize(levelCanvas);
 
       const activityCanvas = this.cropCanvas(rawCanvas, 0, activityYRatio, 1, 1 - activityYRatio);
       this.binarize(activityCanvas);
@@ -102,12 +110,14 @@ export class ProfileOcrService {
       this.binarize(activityValuesCanvas);
 
       // Pass 2: Focused crops
+      const levelText = (await this.recognize(worker, levelCanvas, PSM.SINGLE_BLOCK)).text;
+      const rawLevelText = (await this.recognize(worker, rawLevelCanvas, PSM.SINGLE_BLOCK)).text;
       const headerText = (await this.recognize(worker, headerCanvas, PSM.SINGLE_BLOCK)).text;
       const activityText = (await this.recognize(worker, activityCanvas, PSM.SINGLE_BLOCK)).text;
       const activityValuesText = (await this.recognize(worker, activityValuesCanvas, PSM.SINGLE_BLOCK, '0123456789.,/ kmiKM')).text;
       
       const orderedActivityText = this.buildActivityTextFromOrderedValues(activityValuesText);
-      const focusedText = [headerText, activityText, orderedActivityText].filter(Boolean).join('\n');
+      const focusedText = [levelText, rawLevelText, headerText, activityText, orderedActivityText].filter(Boolean).join('\n');
       const stats1 = parseProfileStats(focusedText);
 
       // We already have fullBinarizedText from Pass 1

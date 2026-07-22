@@ -384,4 +384,57 @@ Total distance pokemon
     `;
     expect(parseProfileStats(text)).toBeNull();
   });
+
+  it('parses level 80 when line contains 80 > LEVEL', () => {
+    const text = `
+Stillworld
+& Sendai 2026
+80 >
+LEVEL
+TOTAL ACTIVITY
+Distance Walked 28,940.9 km
+Pokémon Caught 320,584
+PokéStops Visited: 188,304
+Total XP: 374,219,044
+    `;
+    const result = parseProfileStats(text);
+    expect(result?.level).toBe(80);
+    expect(result?.totalXp).toBe(374219044);
+    expect(result?.pokemonCaught).toBe(320584);
+  });
+
+  it('parses level 80 on same line with chevron: 80 LEVEL >', () => {
+    const text = `
+Stillworld
+& Sendai 2026
+80 LEVEL >
+BUDDY HISTORY SCRAPBOOK JOURNAL STYLE
+TOTAL ACTIVITY
+Distance Walked 28,940.9 km
+    `;
+    const result = parseProfileStats(text);
+    expect(result?.level).toBe(80);
+  });
+
+  it('parses level 80 with OCR typo in label LEVE1 and trailing noise', () => {
+    const text = `
+Stillworld
+80 > |
+LEVE1
+BUDDY SCRAPBOOK
+    `;
+    const result = parseProfileStats(text);
+    expect(result?.level).toBe(80);
+  });
+
+  it('recovers level 80 from letter confusion BO near LEVEL label', () => {
+    const text = `
+Stillworld
+BO >
+LEVEL
+BUDDY SCRAPBOOK
+    `;
+    const result = parseProfileStats(text);
+    expect(result?.level).toBe(80);
+  });
 });

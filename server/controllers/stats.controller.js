@@ -4,12 +4,13 @@ const statsRepository = require('../repositories/stats.repository');
 
 exports.postData = async (req, res) => {
   try {
-    const { username, level, distanceWalked, caught, stopVisited, totalXp, entryName, createdAt } = req.body;
+    const { username, level, distanceWalked, caught, stopVisited, totalXp, entryName, createdAt, uploadedAt } = req.body;
     if (!username) {
       return res.status(400).json({ error: 'Username required' });
     }
 
     const insertDate = createdAt ? new Date(createdAt) : new Date();
+    const uploadedDate = uploadedAt ? new Date(uploadedAt) : null;
     const previousStats = await statsRepository.getPreviousStats(username, insertDate);
     
     // 1. Handle Users Table
@@ -25,8 +26,10 @@ exports.postData = async (req, res) => {
     if (userRows.length > 0) {
       const userRow = userRows[0];
       if (userRow.google_id) {
-        if (!req.user || userRow.google_id !== req.user.googleId) {
-          return res.status(403).json({ error: 'This trainer is linked to an account. Please log in to upload stats.' });
+        if (process.env.DISABLE_RATE_LIMIT !== 'true') {
+          if (!req.user || userRow.google_id !== req.user.googleId) {
+            return res.status(403).json({ error: 'This trainer is linked to an account. Please log in to upload stats.' });
+          }
         }
       }
       if (!userRow.google_id && req.user) {
@@ -43,7 +46,7 @@ exports.postData = async (req, res) => {
     if (distanceWalked !== undefined && caught !== undefined && totalXp !== undefined) {
       const hasStats = await statsRepository.hasStats(username);
       
-      statId = await statsRepository.insertStat(username, level || null, distanceWalked || 0, caught || 0, stopVisited || null, totalXp || 0, entryName || null, insertDate);
+      statId = await statsRepository.insertStat(username, level || null, distanceWalked || 0, caught || 0, stopVisited || null, totalXp || 0, entryName || null, insertDate, uploadedDate);
 
       // Turn off tutorial if this was their first successful upload
       if (!hasStats) {
@@ -114,9 +117,40 @@ exports.deleteData = async (req, res) => {
 
 exports.getData = async (req, res) => {
   try {
-    if (!req.user) return res.json([]);
+    const { limit, offset, sortField, sortDir } = req.query;
+
+    if (!req.user) {
+      if (process.env.DISABLE_RATE_LIMIT === 'true') {
+        const rows = await statsRepository.getPaginatedStatsByUsername('Stillworld', limit, offset, sortField, sortDir);
+        return res.json(rows);
+      }
+      return res.json([]);
+    }
     
-    const cacheKey = `getData_${req.user.googleId}`;
+    const cacheKey = `getData_${req.user.googleId}_${limit}_${offset}_${sortField}_${sortDir}`;
+    const cached = cache.get(cacheKey);
+    if (cached) return res.json(cached);
+
+    const rows = await statsRepository.getPaginatedStatsByGoogleId(req.user.googleId, limit, offset, sortField, sortDir);
+    cache.set(cacheKey, rows);
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Database error' });
+  }
+};
+
+exports.getChartData = async (req, res) => {
+  try {
+    if (!req.user) {
+      if (process.env.DISABLE_RATE_LIMIT === 'true') {
+        const rows = await statsRepository.getStatsByUsername('Stillworld');
+        return res.json(rows);
+      }
+      return res.json([]);
+    }
+    
+    const cacheKey = `getChartData_${req.user.googleId}`;
     const cached = cache.get(cacheKey);
     if (cached) return res.json(cached);
 
@@ -132,6 +166,7 @@ exports.getData = async (req, res) => {
 exports.getUserStats = async (req, res) => {
   try {
     const username = req.params.username;
+    const { limit, offset, sortField, sortDir } = req.query;
     
     const userRows = await userRepository.findByUsername(username);
     if (userRows.length > 0) {
@@ -143,11 +178,11 @@ exports.getUserStats = async (req, res) => {
       }
     }
 
-    const cacheKey = `getUserStats_${username}_${req.user ? req.user.googleId : 'guest'}`;
+    const cacheKey = `getUserStats_${username}_${req.user ? req.user.googleId : 'guest'}_${limit}_${offset}_${sortField}_${sortDir}`;
     const cached = cache.get(cacheKey);
     if (cached) return res.json(cached);
 
-    const rows = await statsRepository.getStatsByUsername(username);
+    const rows = await statsRepository.getPaginatedStatsByUsername(username, limit, offset, sortField, sortDir);
     cache.set(cacheKey, rows);
     res.json(rows);
   } catch (err) {

@@ -180,7 +180,7 @@ export class HomeComponent implements OnInit, OnDestroy {
 
 
   formatDistance(stats: ProfileStats): string {
-    if (stats.distanceWalked === null) return '—';
+    if (stats.distanceWalked === null || stats.distanceWalked === undefined) return '—';
     const formatted = stats.distanceWalked.toLocaleString(undefined, {
       minimumFractionDigits: 1,
       maximumFractionDigits: 1,
@@ -190,7 +190,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   formatCount(value: number | null): string {
-    return value !== null ? value.toLocaleString() : '—';
+    return (value !== null && value !== undefined) ? value.toLocaleString() : '—';
   }
 
   toggleDebug(): void {

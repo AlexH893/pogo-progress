@@ -1,64 +1,69 @@
 :host {
   display: block;
   width: 100%;
-  max-width: 400px;
-  margin: 0 auto;
 }
 
 .home__header {
   text-align: center;
-  padding: 1.5rem;
+  padding: 2rem 1.5rem;
+  background: var(--color-surface);
+  border: var(--border-subtle);
+  border-radius: var(--border-radius-card);
+  box-shadow: var(--shadow-soft);
+  margin-bottom: 2rem;
 
   h1 {
     margin: 0 0 0.5rem;
-    font-size: 1.75rem;
-    font-weight: 700;
+    font-size: 2.25rem;
+    font-weight: 500;
+    color: var(--color-text-primary);
   }
-
 
   .home__instructions {
     margin: 0;
-    color: rgba(232, 245, 233, 0.7);
-    line-height: 1.5;
-    font-size: 0.95rem;
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+    font-size: 1rem;
+    font-family: var(--font-sans);
   }
 }
 
 .drop-zone {
   margin-top: 1.5em;
-  min-height: 250px;
+  min-height: 280px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  border: 2px dashed rgba(255, 255, 255, 0.15);
-  border-radius: 1rem;
+  border: 2px dashed rgba(0, 0, 0, 0.15);
+  border-radius: var(--border-radius-card);
   padding: 4rem 1.5rem;
   text-align: center;
-  transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
   cursor: pointer;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(255, 255, 255, 0.5);
+  transition: all 0.3s ease;
 
   &:hover {
-    border-color: rgba(129, 199, 132, 0.6);
-    background: rgba(129, 199, 132, 0.05);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    border-color: var(--color-primary);
+    background: rgba(255, 90, 0, 0.05);
     
     .upload-icon {
-      color: #a5d6a7;
+      color: var(--color-primary);
+      transform: translateY(-5px);
     }
   }
 
   &--active {
-    border-color: #81c784;
-    background: rgba(129, 199, 132, 0.1);
-    transform: scale(1.02);
+    border-style: solid;
+    border-color: var(--color-primary);
+    background: rgba(255, 90, 0, 0.1);
+    box-shadow: 0 0 0 4px rgba(255, 90, 0, 0.2);
   }
 
   &--disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     pointer-events: none;
+    filter: grayscale(100%);
   }
 
   &__input {
@@ -69,50 +74,55 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1rem;
+    gap: 1.25rem;
     cursor: pointer;
   }
 
   .upload-icon {
-    color: #81c784;
+    color: var(--color-text-secondary);
     margin-bottom: 0.5rem;
-    animation: float-icon 3s ease-in-out infinite;
-    transition: color 0.3s ease;
+    transition: all 0.3s ease;
+    
+    svg {
+      width: 48px;
+      height: 48px;
+    }
   }
 
   &__title {
-    font-size: 1.1rem;
+    font-size: 1.15rem;
     font-weight: 600;
-    color: #e8f5e9;
+    color: var(--color-text-primary);
+    font-family: var(--font-sans);
   }
 
   &__hint {
     font-size: 0.9rem;
-    color: rgba(232, 245, 233, 0.5);
+    color: var(--color-text-secondary);
   }
-}
-
-@keyframes float-icon {
-  0% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
-  100% { transform: translateY(0); }
 }
 
 .preview {
   margin: 0;
   text-align: center;
+  transform-origin: center top;
 
   img {
     max-width: 100%;
     max-height: 16rem;
-    border-radius: 1rem;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    border-radius: var(--border-radius-card);
+    border: var(--border-subtle);
+    box-shadow: var(--shadow-soft);
   }
 }
 
 .status {
   text-align: center;
-  padding: 2rem;
+  padding: 2.5rem 2rem;
+  background: var(--color-surface);
+  border: var(--border-subtle);
+  border-radius: var(--border-radius-card);
+  box-shadow: var(--shadow-float);
 
   &--loading {
     display: flex;
@@ -122,148 +132,133 @@
   }
 
   &--error {
-    background: rgba(211, 47, 47, 0.1) !important;
-    color: #ef5350;
-    border: 1px solid rgba(211, 47, 47, 0.2) !important;
+    border-left: 4px solid var(--color-danger);
     text-align: left;
   }
 }
-
-
 
 .fade-out-image {
   opacity: 1;
   visibility: visible;
   max-height: 1000px;
   overflow: hidden;
-  transition: all 0.5s ease;
 }
 
+/* Triggered as soon as isProcessing becomes true */
+.fade-out-image.animating-out {
+  animation: screenshot-depart 2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Fallback collapse after success state (element is usually already invisible) */
 .fade-out-image.disappear {
   opacity: 0;
   visibility: hidden;
   max-height: 0;
   margin: 0;
+  transition: opacity 0.3s ease, max-height 0.3s ease;
+}
+
+@keyframes screenshot-depart {
+  0%   { opacity: 1;   transform: scale(1)    translateY(0px);   filter: blur(0px);  max-height: 1000px; }
+  40%  { opacity: 0.6; transform: scale(0.95) translateY(-10px);  filter: blur(3px);  }
+  100% { opacity: 0;   transform: scale(0.8)  translateY(-28px); filter: blur(10px); max-height: 0; margin: 0; }
 }
 
 @media (max-width: 768px) {
   .home__header {
-    padding: 1rem 0.5rem;
-    
+    padding: 1.5rem 1rem;
+    margin-bottom: 1.5rem;
+
     h1 {
-      font-size: 1.2rem;
-      margin-bottom: 0.25rem;
-    }
-    
-    .home__instructions {
-      font-size: 0.85rem;
+      font-size: 1.5rem;
     }
   }
+
 
   .drop-zone {
-    padding: .8rem 1rem;
-    margin-top: 0.5rem;
+    padding: 1.5rem 1rem;
+    min-height: 160px;
     
-    .upload-icon {
-      svg {
-        width: 36px;
-        height: 36px;
-      }
+    .upload-icon svg {
+      width: 32px;
+      height: 32px;
     }
   }
-}
 
-.view-example-btn {
-  margin-top: 1rem;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #e8f5e9;
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: translateY(-1px);
+  .status {
+    padding: 1.5rem 1rem;
   }
 }
+
+
 
 .example-modal {
   border: none;
-  border-radius: 1rem;
+  border-radius: var(--border-radius-card);
   padding: 0;
-  background: transparent;
+  background: var(--color-surface);
   max-width: 90vw;
   width: 400px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-float);
 
-  /* Start state */
   opacity: 0;
-  transform: translateY(30px) scale(0.95);
-  transition: opacity 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transform: translateY(30px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
 
   &::backdrop {
-    background: rgba(0, 0, 0, 0);
-    backdrop-filter: blur(0px);
-    transition: background 0.3s ease, backdrop-filter 0.3s ease;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
   }
 
   &.is-open {
     opacity: 1;
-    transform: translateY(0) scale(1);
-    
-    &::backdrop {
-      background: rgba(0, 0, 0, 0.6);
-      backdrop-filter: blur(5px);
-    }
+    transform: translateY(0);
   }
 
   .modal-content {
     position: relative;
-    padding: 1.5rem;
-    background: var(--card-bg, rgba(20, 20, 20, 0.8)); // Fallback if glass-card doesn't provide bg here
+    padding: 2rem;
     text-align: center;
-    border-radius: 1rem;
 
     h2 {
       margin-top: 0;
-      margin-bottom: 0.5rem;
-      font-size: 1.25rem;
+      margin-bottom: 1rem;
+      font-size: 1.5rem;
     }
 
     p {
-      font-size: 0.9rem;
-      color: rgba(255, 255, 255, 0.8);
-      margin-bottom: 1rem;
+      font-size: 0.95rem;
+      color: var(--color-text-secondary);
+      margin-bottom: 1.5rem;
     }
 
     .example-screenshot-img {
       max-width: 100%;
       height: auto;
-      border-radius: 0.5rem;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      box-shadow: var(--shadow-soft);
+      border: var(--border-subtle);
     }
 
     .close-modal-btn {
       position: absolute;
-      top: 0.75rem;
-      right: 0.75rem;
-      background: none;
+      top: 1rem;
+      right: 1rem;
+      background: rgba(0,0,0,0.05);
       border: none;
-      color: rgba(255, 255, 255, 0.6);
+      color: var(--color-text-secondary);
       cursor: pointer;
-      padding: 0.25rem;
-      transition: color 0.2s;
+      padding: 0.5rem;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
 
       &:hover {
-        color: white;
+        background: rgba(0,0,0,0.1);
+        color: var(--color-text-primary);
       }
     }
   }
 }
-

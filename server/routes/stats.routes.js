@@ -9,6 +9,7 @@ router.post('/post-data', optionalAuth, actionLimiter, validateStats, statsContr
 router.put('/update-data/:id', requireAuth, actionLimiter, validateStats, statsController.updateData);
 router.delete('/delete-data/:id', requireAuth, actionLimiter, statsController.deleteData);
 router.get('/get-data', optionalAuth, statsController.getData);
+router.get('/get-chart-data', optionalAuth, statsController.getChartData);
 router.get('/get-user-stats/:username', optionalAuth, statsController.getUserStats);
 
 module.exports = router;
