@@ -524,7 +524,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   calculateDiffs(animate: boolean = true): void {
-    if (!this.stats || !this.previousStats) {
+    if (!this.stats || !this.previousStats || this.isStardustOnlyUpload) {
       this.statDiffs = null;
       this.dailyAverages = null;
       this.diffDays = 0;

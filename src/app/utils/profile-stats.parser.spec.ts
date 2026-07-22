@@ -451,4 +451,32 @@ BUDDY SCRAPBOOK
     const result = parseProfileStats(text);
     expect(result?.level).toBe(80);
   });
+
+  it('parses stardust 5163855 from pikachu detail screen with section sign symbol', () => {
+    const text = `
+7:249) d o aE
+RY x
+»"
+a . y
+4h,
+= 0.9, NL
+SIN
+J/
+Pikachu /’
+
+86/86 HP ?
+74kg | ® | 046m
+WEIGHT ELECTRIC HEIGHT
+
+§5163855 OQ 17,797 § 1,044
+STARDUST PIKACHU CANDY PIKACHU CANDY
+XL
+    `;
+    const result = parseProfileStats(text);
+    expect(result).toBeTruthy();
+    expect(result?.stardust).toBe(5163855);
+    expect(result?.level).toBeNull();
+    expect(result?.pokemonCaught).toBeNull();
+    expect(result?.username).toBeNull();
+  });
 });

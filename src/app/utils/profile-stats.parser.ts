@@ -495,13 +495,13 @@ export function isPokemonDetailScreen(text: string): boolean {
 }
 
 function parseStardust(text: string): number | null {
-  // 1. Number above "STARDUST" label (as seen on Pokémon inspection screens: "5,163,855 \n STARDUST")
+  // 1. Number above "STARDUST" label (as seen on Pokémon inspection screens: "§5,163,855 \n STARDUST")
   const numberAboveLabel = text.match(
-    /(?:^|\n)\s*([\d,.]{1,12})[^\n]*\r?\n\s*(?:stardust|star\s*dust|5tardust|siardust|sta\s*rdust)\b/im
+    /(?:^|\n)[^\d\n]*?([\d,.]{1,12})[^\n]*\r?\n\s*(?:stardust|star\s*dust|5tardust|siardust|sta\s*rdust)\b/im
   );
   if (numberAboveLabel) {
     const val = parseInteger(numberAboveLabel[1]);
-    if (!Number.isNaN(val) && val >= 0) {
+    if (!Number.isNaN(val) && val >= 10) {
       return val;
     }
   }
@@ -510,16 +510,16 @@ function parseStardust(text: string): number | null {
   const labelFirst = text.match(/(?:stardust|star\s*dust|5tardust|siardust|sta\s*rdust)\b[^\d\n]*?([\d,.]{1,12})/i);
   if (labelFirst) {
     const val = parseInteger(labelFirst[1]);
-    if (!Number.isNaN(val) && val >= 0) {
+    if (!Number.isNaN(val) && val >= 10) {
       return val;
     }
   }
 
   // 3. Same line number then label: "5,163,855 STARDUST"
-  const numberFirst = text.match(/([\d,.]{1,12})[^\n]*?\b(?:stardust|star\s*dust|5tardust|siardust|sta\s*rdust)\b/i);
+  const numberFirst = text.match(/[^\d\n]*?([\d,.]{1,12})[^\n]*?\b(?:stardust|star\s*dust|5tardust|siardust|sta\s*rdust)\b/i);
   if (numberFirst) {
     const val = parseInteger(numberFirst[1]);
-    if (!Number.isNaN(val) && val >= 0) {
+    if (!Number.isNaN(val) && val >= 10) {
       return val;
     }
   }
@@ -528,13 +528,13 @@ function parseStardust(text: string): number | null {
   if (isPokemonDetailScreen(text)) {
     const lines = text.split(/\r?\n/);
     for (const line of lines) {
-      if (/POWER\s*UP|WEIGHT|HEIGHT|\bHP\b|GYMS|RAIDS|BATTLES/i.test(line)) {
+      if (/POWER\s*UP|WEIGHT|HEIGHT|\bHP\b|GYMS|RAIDS|BATTLES|LEVEL|CANDY|ENERGY/i.test(line)) {
         continue;
       }
-      const match = line.match(/([\d,.]{4,12})/);
+      const match = line.match(/[^\d\n]*?([\d,.]{3,12})/);
       if (match) {
         const val = parseInteger(match[1]);
-        if (!Number.isNaN(val) && val > 0 && val < 100_000_000) {
+        if (!Number.isNaN(val) && val >= 10 && val < 100_000_000) {
           return val;
         }
       }

@@ -13,7 +13,7 @@
     </app-upload>
 
     <app-diff-summary
-      *ngIf="state === 'success' && stats"
+      *ngIf="state === 'success' && stats && !isStardustOnlyUpload"
       [statDiffs]="statDiffs"
       [dailyAverages]="dailyAverages"
       [editingFields]="editingFields">
@@ -164,12 +164,12 @@
     </section>
 
     <app-fun-fact
-      *ngIf="state === 'success' && stats && funFact"
+      *ngIf="state === 'success' && stats && funFact && !isStardustOnlyUpload"
       [funFact]="funFact"
       (shuffleClicked)="shuffleFunFact()">
     </app-fun-fact>
 
-    @if (userHistory.length > 0 && username) {
+    @if (userHistory.length > 0 && username && !isStardustOnlyUpload) {
       @defer (on viewport) {
         <app-progress-chart
           [userHistory]="userHistory"

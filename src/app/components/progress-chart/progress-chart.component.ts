@@ -27,13 +27,15 @@ export class ProgressChartComponent implements OnChanges {
   }
 
   private updateChart(): void {
-    if (!this.progressChartRef || this.userHistory.length === 0) return;
+    if (!this.progressChartRef) return;
+    const validHistory = this.userHistory.filter(row => row[this.selectedMetric] !== null && row[this.selectedMetric] !== undefined);
+    if (validHistory.length === 0) return;
 
     const ctx = this.progressChartRef.nativeElement.getContext('2d');
     if (!ctx) return;
 
-    const labels = this.userHistory.map(row => new Date(row.created_at).toLocaleDateString());
-    const data = this.userHistory.map(row => row[this.selectedMetric]);
+    const labels = validHistory.map(row => new Date(row.created_at).toLocaleDateString());
+    const data = validHistory.map(row => row[this.selectedMetric]);
 
     let labelText = '';
     let themeColor = '#FF5A00'; // Default Daylight Orange
