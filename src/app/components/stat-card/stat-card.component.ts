@@ -33,7 +33,7 @@ export class StatCardComponent implements OnInit, OnDestroy {
 
     this.observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
-        if (entry.isIntersecting && !this.hasAnimated && this.value !== null) {
+        if (entry.isIntersecting && !this.hasAnimated && this.value !== null && this.value !== undefined) {
           this.hasAnimated = true;
           this.animateValue(0, this.value, 1500);
           this.observer?.disconnect();
