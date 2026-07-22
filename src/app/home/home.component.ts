@@ -553,9 +553,6 @@ export class HomeComponent implements OnInit, OnDestroy {
       diffs.stardust = (this.stats.stardust || 0) - (this.previousStats.stardust || 0);
     }
     
-    console.log('calculated diffs:', diffs);
-    console.log('this.stats:', this.stats);
-    console.log('this.previousStats:', this.previousStats);
 
     if (
       diffs.level !== 0 ||

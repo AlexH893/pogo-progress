@@ -20,7 +20,7 @@ export class StatCardComponent implements OnInit, OnDestroy {
   
   @Output() correctionSubmitted = new EventEmitter<string>();
 
-  @ViewChild('statValueEl', { static: true }) statValueEl!: ElementRef;
+
 
   private valInputEl: ElementRef<HTMLInputElement> | null = null;
   @ViewChild('valInput') set valInput(content: ElementRef<HTMLInputElement> | null) {

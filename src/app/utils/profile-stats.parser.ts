@@ -70,7 +70,7 @@ function cleanUsername(candidate: string): string {
 
 function parseUsername(text: string): string | null {
   // Pokémon detail screens do not show the trainer username
-  if (/stardust|candy|mega\s*energy|power\s*up/i.test(text) && !/total\s*activity/i.test(text)) {
+  if (isPokemonDetailScreen(text)) {
     return null;
   }
 
@@ -305,7 +305,7 @@ function parseDistance(
 }
 
 function parsePokemonCaught(text: string): number | null {
-  if (/stardust|candy|mega\s*energy|power\s*up/i.test(text) && !/total\s*activity/i.test(text)) {
+  if (isPokemonDetailScreen(text)) {
     return null;
   }
   const patterns: RegExp[] = [
@@ -336,7 +336,7 @@ function parsePokemonCaught(text: string): number | null {
 }
 
 function parsePokestopsVisited(text: string): number | null {
-  if (/stardust|candy|mega\s*energy|power\s*up/i.test(text) && !/total\s*activity/i.test(text)) {
+  if (isPokemonDetailScreen(text)) {
     return null;
   }
   const patterns: RegExp[] = [
@@ -369,7 +369,7 @@ function parseStructuralActivityCounts(text: string): {
   pokestopsVisited: number | null;
 } {
   // Bypass structural fallback on Pokémon detail screens (prevents Candy/Candy XL from being read as Caught/Stops)
-  if (/stardust|candy|mega\s*energy|power\s*up/i.test(text) && !/total\s*activity/i.test(text)) {
+  if (isPokemonDetailScreen(text)) {
     return { pokemonCaught: null, pokestopsVisited: null };
   }
 
@@ -489,9 +489,29 @@ function parseTotalXp(text: string): number | null {
 }
 export function isPokemonDetailScreen(text: string): boolean {
   const upper = text.toUpperCase();
-  const hasPokemonKeywords = /STARDUST|CANDY|POWER\s*UP|WEIGHT|HEIGHT|\bHP\b|GYMS|RAIDS|TRAINER\s*BATTLES/.test(upper);
-  const hasProfileKeywords = /TOTAL\s*ACTIVITY|DISTANCE\s*WALKED/.test(upper);
-  return hasPokemonKeywords && !hasProfileKeywords;
+
+  // Hard exclude: definitive profile-page markers
+  if (/TOTAL\s*ACT[I1]V[I1]TY|D[I1]STANCE\s*WALKED/.test(upper)) {
+    return false;
+  }
+
+  // Require at least 2 independent strong Pokémon-detail signals to avoid
+  // mis-classifying a profile screenshot that has a single noisy OCR word.
+  // "STARDUST" alone counts as 2 since it only appears on the Pokémon screen.
+  const strongSignals: RegExp[] = [
+    /\bSTARDUST\b/,            // Only on Pokémon inspect screen (worth 2)
+    /\bSTARDUST\b/,            // counted twice intentionally
+    /\bCANDY\b/,
+    /POWER\s*UP/,
+    /TRAINER\s*BATTLES/,
+    /\bGYMS\s*&\s*RAIDS\b/,
+    /\bRAIDU?\b.*\bCANDY\b/,  // "RAICHU CANDY"
+    /\d+\s*\/\s*\d+\s*HP/,    // "86/86 HP"
+    /\b(?:WEIGHT|HEIGHT)\b.*\b(?:WEIGHT|HEIGHT)\b/,  // Both on same screen
+  ];
+
+  const matchCount = strongSignals.filter(r => r.test(upper)).length;
+  return matchCount >= 2;
 }
 
 function parseStardust(text: string): number | null {

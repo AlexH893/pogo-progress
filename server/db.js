@@ -26,7 +26,7 @@ pool.query = async function (sql, params) {
 (async () => {
   try {
     const [rows] = await pool.query(
-      "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'stats' AND COLUMN_NAME = 'stardust'"
+      "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'stats' AND COLUMN_NAME = 'stardust'"
     );
     if (rows.length === 0) {
       await pool.query("ALTER TABLE stats ADD COLUMN stardust BIGINT NULL AFTER total_xp");

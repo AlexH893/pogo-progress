@@ -440,7 +440,7 @@ export class LogbookComponent implements OnInit, AfterViewInit {
   }
 
   isStardustEntry(row: any): boolean {
-    return row && row.stardust != null && (row.level == null || row.level === 0) && (row.total_xp == null || row.total_xp === 0);
+    return row && row.stardust != null && row.level == null && (row.total_xp == null || row.total_xp === 0);
   }
 
   formatDate(dateStr: string): string {
