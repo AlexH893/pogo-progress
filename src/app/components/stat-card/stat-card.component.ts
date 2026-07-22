@@ -87,8 +87,9 @@ export class StatCardComponent implements OnInit, OnDestroy {
   }
 
   submitCorrection(val: string): void {
-    this.correctionSubmitted.emit(val);
     this.isEditing = false;
-    this.isEditingChange.emit(this.isEditing);
+    this.isEditingChange.emit(false);
+    this.correctionSubmitted.emit(val);
+    this.cdr.detectChanges();
   }
 }

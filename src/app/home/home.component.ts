@@ -392,7 +392,11 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   submitCorrection(field: keyof ProfileStats | 'createdAt', value: string): void {
-    if (!this.stats) return;
+    if (!this.stats) {
+      this.editingFields[field] = false;
+      this.cdr.detectChanges();
+      return;
+    }
 
     // Fix Race Condition: If the initial background save is still running, 
     // queue the correction to run shortly after it finishes so we don't duplicate entries.
@@ -401,37 +405,41 @@ export class HomeComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // Always exit editing mode for this field when submitting or blurring
+    this.editingFields[field] = false;
+
     if (this.usernameMismatch && field !== 'username') {
       this.errorMessage = 'Please confirm your trainer name before saving other corrections.';
-      this.editingFields[field] = false;
       this.cdr.detectChanges();
       return;
     }
 
+    let hasChanged = false;
+
     if (field === 'username') {
-      if (!value.trim()) return; // don't save a blank username
-      this.stats.username = value.trim();
-      this.username = value.trim();
-      // Clear any mismatch warning once the user has confirmed their trainer name
-      this.usernameMismatch = false;
-      this.ocrUsername = '';
+      if (value.trim()) {
+        this.stats.username = value.trim();
+        this.username = value.trim();
+        this.usernameMismatch = false;
+        this.ocrUsername = '';
+        hasChanged = true;
+      }
     } else if (field === 'entryName') {
       this.stats.entryName = value;
+      hasChanged = true;
     } else if (field === 'createdAt' as any) {
       const parsedDate = new Date(value);
       if (!Number.isNaN(parsedDate.getTime())) {
         this.screenshotDate = parsedDate;
-      } else {
-        return;
+        hasChanged = true;
       }
     } else if (field === 'distanceWalked') {
       const parsed = parseFloat(value);
       if (!Number.isNaN(parsed)) {
         this.stats.distanceWalked = Math.max(0, Math.min(1000000, parsed));
         if (this.displayStats) this.displayStats.distanceWalked = this.stats.distanceWalked;
-        if (!this.stats.distanceUnit) this.stats.distanceUnit = 'km'; // default
-      } else {
-        return;
+        if (!this.stats.distanceUnit) this.stats.distanceUnit = 'km';
+        hasChanged = true;
       }
     } else {
       let parsed = parseInt(value, 10);
@@ -444,13 +452,16 @@ export class HomeComponent implements OnInit, OnDestroy {
 
         (this.stats as any)[field] = parsed;
         if (this.displayStats) (this.displayStats as any)[field] = parsed;
-      } else {
-        return;
+        hasChanged = true;
       }
     }
 
-    this.editingFields[field] = false;
     this.calculateDiffs(false);
+    this.cdr.detectChanges();
+
+    if (!hasChanged) {
+      return; // Exit edit mode cleanly without persisting invalid/unchanged data
+    }
     
     if (this.showFunFactsEnabled) {
       this.generateFunFacts();
