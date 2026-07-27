@@ -1,6 +1,7 @@
 const cache = require('../cache');
 const userRepository = require('../repositories/user.repository');
 const statsRepository = require('../repositories/stats.repository');
+const { handleServerError } = require('../utils/errorHandler');
 
 exports.postData = async (req, res) => {
   try {
@@ -81,8 +82,7 @@ exports.postData = async (req, res) => {
     cache.invalidateUser(req.user ? req.user.googleId : null, username);
     res.json({ success: true, statId, previousStats });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Database error' });
+    return handleServerError(res, err, 'Failed to save trainer stats.');
   }
 };
 
@@ -123,8 +123,7 @@ exports.updateData = async (req, res) => {
     cache.invalidateUser(req.user ? req.user.googleId : null, [username, originalUsername]);
     res.json({ success: true });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Database error' });
+    return handleServerError(res, err, 'Failed to update trainer stats entry.');
   }
 };
 
@@ -145,8 +144,7 @@ exports.deleteData = async (req, res) => {
     cache.invalidateUser(req.user ? req.user.googleId : null, statUsername);
     res.json({ success: true });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Database error' });
+    return handleServerError(res, err, 'Failed to delete entry.');
   }
 };
 
@@ -170,8 +168,7 @@ exports.getData = async (req, res) => {
     cache.set(cacheKey, rows);
     res.json(rows);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Database error' });
+    return handleServerError(res, err, 'Failed to fetch trainer stats.');
   }
 };
 
@@ -193,8 +190,7 @@ exports.getChartData = async (req, res) => {
     cache.set(cacheKey, rows);
     res.json(rows);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Database error' });
+    return handleServerError(res, err, 'Failed to fetch performance chart data.');
   }
 };
 
@@ -221,7 +217,6 @@ exports.getUserStats = async (req, res) => {
     cache.set(cacheKey, rows);
     res.json(rows);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Database error' });
+    return handleServerError(res, err, 'Failed to fetch user stats.');
   }
 };

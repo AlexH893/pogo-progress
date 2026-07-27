@@ -60,6 +60,12 @@ try {
   console.log('Angular SSR engine not found or failed to load. Serving API only.');
 }
 
+// Global error handling middleware for uncaught router errors
+const { handleServerError } = require('./utils/errorHandler');
+app.use((err, req, res, next) => {
+  return handleServerError(res, err, 'An unexpected server error occurred.');
+});
+
 const port = process.env.PORT || 3000;
 if (require.main === module) {
   app.listen(port, () => {

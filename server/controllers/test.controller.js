@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('../middleware/auth');
 const userRepository = require('../repositories/user.repository');
 const statsRepository = require('../repositories/stats.repository');
+const { handleServerError } = require('../utils/errorHandler');
 
 exports.getTestToken = (req, res) => {
   if (process.env.NODE_ENV === 'production') {
@@ -37,7 +38,6 @@ exports.cleanupTestData = async (req, res) => {
     
     res.json({ success: true });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Database error' });
+    return handleServerError(res, err, 'Failed to cleanup test data.');
   }
 };

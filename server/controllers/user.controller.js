@@ -1,13 +1,13 @@
 const userRepository = require('../repositories/user.repository');
 const statsRepository = require('../repositories/stats.repository');
+const { handleServerError } = require('../utils/errorHandler');
 
 exports.getUserPreferences = async (req, res) => {
   try {
     const rows = await userRepository.getPreferences(req.user.googleId);
     res.json(rows);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Database error' });
+    return handleServerError(res, err, 'Failed to fetch user preferences.');
   }
 };
 
@@ -31,8 +31,7 @@ exports.updateUserPreferences = async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Database error' });
+    return handleServerError(res, err, 'Failed to update user preferences.');
   }
 };
 
@@ -46,8 +45,7 @@ exports.exportData = async (req, res) => {
     const statRows = await statsRepository.getStatsByUsernames(usernames);
     res.json(statRows);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Database error' });
+    return handleServerError(res, err, 'Failed to export user data.');
   }
 };
 
@@ -63,8 +61,7 @@ exports.unlinkTrainer = async (req, res) => {
     await userRepository.unlinkTrainer(username);
     res.json({ success: true });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Database error' });
+    return handleServerError(res, err, 'Failed to unlink trainer profile.');
   }
 };
 
@@ -80,7 +77,6 @@ exports.deleteAccount = async (req, res) => {
     
     res.json({ success: true });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Database error' });
+    return handleServerError(res, err, 'Failed to delete account.');
   }
 };
