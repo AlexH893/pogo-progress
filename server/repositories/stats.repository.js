@@ -35,9 +35,10 @@ class StatsRepository {
   }
 
   async insertStat(username, level, distanceWalked, caught, stopVisited, totalXp, entryName, insertDate, uploadedAt = null, stardust = null) {
+    const finalUploadedAt = uploadedAt || new Date();
     const [result] = await db.execute(
-      'INSERT INTO stats (username, level, distance_walked, caught, stop_visited, total_xp, stardust, entry_name, created_at, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))',
-      [username, level, distanceWalked, caught, stopVisited, totalXp, stardust, entryName, insertDate, uploadedAt]
+      'INSERT INTO stats (username, level, distance_walked, caught, stop_visited, total_xp, stardust, entry_name, created_at, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [username, level, distanceWalked, caught, stopVisited, totalXp, stardust, entryName, insertDate, finalUploadedAt]
     );
     return result.insertId;
   }
