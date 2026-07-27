@@ -14,6 +14,7 @@ export interface ProfileStats {
   pokemonCaught: number | null;
   pokestopsVisited: number | null;
   totalXp: number | null;
+  stardust?: number | null;
   username: string | null;
   entryName?: string | null;
 }

@@ -19,7 +19,7 @@
     "build:ssr": "ng build && ng run pogo-progress:server",
     "prerender": "ng run pogo-progress:prerender",
     "test:server": "jest --config=server/jest.config.js",
-    "loadtest": "node loadtest-post.js",
+    "loadtest": "node scripts/loadtest-post.js",
     "server:loadtest": "DISABLE_RATE_LIMIT=true node ./server/app.js"
   },
   "private": true,

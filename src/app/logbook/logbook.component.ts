@@ -402,7 +402,8 @@ export class LogbookComponent implements OnInit, AfterViewInit {
         distance_walked: (newer.distance_walked !== null && older.distance_walked !== null) ? newer.distance_walked - older.distance_walked : null,
         caught: (newer.caught !== null && older.caught !== null) ? newer.caught - older.caught : null,
         stop_visited: (newer.stop_visited !== null && older.stop_visited !== null) ? newer.stop_visited - older.stop_visited : null,
-        level: (newer.level !== null && older.level !== null) ? newer.level - older.level : null
+        level: (newer.level !== null && older.level !== null) ? newer.level - older.level : null,
+        stardust: (newer.stardust !== null && newer.stardust !== undefined && older.stardust !== null && older.stardust !== undefined) ? newer.stardust - older.stardust : null
       }
     };
 
@@ -437,6 +438,10 @@ export class LogbookComponent implements OnInit, AfterViewInit {
         this.closeDeleteDialog();
       }
     }
+  }
+
+  isStardustEntry(row: any): boolean {
+    return row && row.stardust != null && row.level == null && (row.total_xp == null || row.total_xp === 0);
   }
 
   formatDate(dateStr: string): string {

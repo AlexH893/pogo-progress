@@ -73,6 +73,7 @@
           <th>Distance</th>
           <th>Caught</th>
           <th>PokéStops</th>
+          <th>Stardust</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -95,24 +96,28 @@
               <input *ngIf="editingCell?.id === row.id && editingCell?.field === 'entry_name'" type="text" maxlength="30" [value]="row.entry_name || ''" #inlineInput autofocus (keyup.enter)="inlineInput.blur()" (blur)="saveInlineEdit(row, 'entry_name', inlineInput.value)" (click)="$event.stopPropagation()" class="inline-edit-input" />
             </td>
             <td data-label="Level" class="editable-cell" (click)="startInlineEdit(row, 'level', $event)">
-              <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'level')">{{ row.level || '—' }}</span>
+              <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'level')">{{ !isStardustEntry(row) && row.level ? row.level : '—' }}</span>
               <input *ngIf="editingCell?.id === row.id && editingCell?.field === 'level'" type="number" min="1" max="80" [value]="row.level || ''" #inlineInput autofocus (keyup.enter)="inlineInput.blur()" (blur)="saveInlineEdit(row, 'level', inlineInput.value)" (click)="$event.stopPropagation()" (keydown)="preventInvalidChars($event)" class="inline-edit-input" />
             </td>
             <td data-label="Total XP" class="editable-cell" (click)="startInlineEdit(row, 'total_xp', $event)">
-              <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'total_xp')">{{ row.total_xp ? row.total_xp.toLocaleString() : '—' }}</span>
+              <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'total_xp')">{{ !isStardustEntry(row) && row.total_xp ? row.total_xp.toLocaleString() : '—' }}</span>
               <input *ngIf="editingCell?.id === row.id && editingCell?.field === 'total_xp'" type="number" min="0" max="2000000000" [value]="row.total_xp || ''" #inlineInput autofocus (keyup.enter)="inlineInput.blur()" (blur)="saveInlineEdit(row, 'total_xp', inlineInput.value)" (click)="$event.stopPropagation()" (keydown)="preventInvalidChars($event)" class="inline-edit-input" />
             </td>
             <td data-label="Distance" class="editable-cell" (click)="startInlineEdit(row, 'distance_walked', $event)">
-              <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'distance_walked')">{{ row.distance_walked !== null ? getDisplayDistance(row.distance_walked, row.default_unit) : '—' }}</span>
+              <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'distance_walked')">{{ !isStardustEntry(row) && row.distance_walked !== null ? getDisplayDistance(row.distance_walked, row.default_unit) : '—' }}</span>
               <input *ngIf="editingCell?.id === row.id && editingCell?.field === 'distance_walked'" type="number" min="0" max="1000000" step="0.1" [value]="row.distance_walked !== null ? row.distance_walked : ''" #inlineInput autofocus (keyup.enter)="inlineInput.blur()" (blur)="saveInlineEdit(row, 'distance_walked', inlineInput.value)" (click)="$event.stopPropagation()" (keydown)="preventInvalidChars($event, true)" class="inline-edit-input" />
             </td>
             <td data-label="Caught" class="editable-cell" (click)="startInlineEdit(row, 'caught', $event)">
-              <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'caught')">{{ row.caught !== null ? row.caught.toLocaleString() : '—' }}</span>
+              <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'caught')">{{ !isStardustEntry(row) && row.caught !== null ? row.caught.toLocaleString() : '—' }}</span>
               <input *ngIf="editingCell?.id === row.id && editingCell?.field === 'caught'" type="number" min="0" max="99999999" [value]="row.caught !== null ? row.caught : ''" #inlineInput autofocus (keyup.enter)="inlineInput.blur()" (blur)="saveInlineEdit(row, 'caught', inlineInput.value)" (click)="$event.stopPropagation()" (keydown)="preventInvalidChars($event)" class="inline-edit-input" />
             </td>
             <td data-label="PokéStops" class="editable-cell" (click)="startInlineEdit(row, 'stop_visited', $event)">
-              <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'stop_visited')">{{ row.stop_visited !== null ? row.stop_visited.toLocaleString() : '—' }}</span>
+              <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'stop_visited')">{{ !isStardustEntry(row) && row.stop_visited !== null ? row.stop_visited.toLocaleString() : '—' }}</span>
               <input *ngIf="editingCell?.id === row.id && editingCell?.field === 'stop_visited'" type="number" min="0" max="99999999" [value]="row.stop_visited !== null ? row.stop_visited : ''" #inlineInput autofocus (keyup.enter)="inlineInput.blur()" (blur)="saveInlineEdit(row, 'stop_visited', inlineInput.value)" (click)="$event.stopPropagation()" (keydown)="preventInvalidChars($event)" class="inline-edit-input" />
+            </td>
+            <td data-label="Stardust" class="editable-cell" (click)="startInlineEdit(row, 'stardust', $event)">
+              <span *ngIf="!(editingCell?.id === row.id && editingCell?.field === 'stardust')">{{ row.stardust !== null && row.stardust !== undefined ? row.stardust.toLocaleString() : '—' }}</span>
+              <input *ngIf="editingCell?.id === row.id && editingCell?.field === 'stardust'" type="number" min="0" max="99999999999" [value]="row.stardust !== null ? row.stardust : ''" #inlineInput autofocus (keyup.enter)="inlineInput.blur()" (blur)="saveInlineEdit(row, 'stardust', inlineInput.value)" (click)="$event.stopPropagation()" (keydown)="preventInvalidChars($event)" class="inline-edit-input" />
             </td>
             <td data-label="Actions" class="actions">
               <div class="action-btns" *ngIf="(user$ | async)?.googleId === row.google_id">
@@ -236,6 +241,13 @@
         <div class="compare-cell">{{ comparisonResult.older.stop_visited | number }}</div>
         <div class="compare-cell">{{ comparisonResult.newer.stop_visited | number }}</div>
         <div class="compare-cell delta-val" [class.positive]="comparisonResult.delta.stop_visited >= 0" [class.negative]="comparisonResult.delta.stop_visited < 0">{{ comparisonResult.delta.stop_visited >= 0 ? '+' : '' }}{{ comparisonResult.delta.stop_visited | number }} Stops</div>
+      </ng-container>
+
+      <!-- Stardust -->
+      <ng-container *ngIf="comparisonResult.delta.stardust !== null">
+        <div class="compare-cell">{{ comparisonResult.older.stardust | number }}</div>
+        <div class="compare-cell">{{ comparisonResult.newer.stardust | number }}</div>
+        <div class="compare-cell delta-val" [class.positive]="comparisonResult.delta.stardust >= 0" [class.negative]="comparisonResult.delta.stardust < 0">{{ comparisonResult.delta.stardust >= 0 ? '+' : '' }}{{ comparisonResult.delta.stardust | number }} Stardust</div>
       </ng-container>
 
     </div>

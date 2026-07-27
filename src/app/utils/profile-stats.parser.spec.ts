@@ -20,6 +20,20 @@ Level 45
     });
   });
 
+  it('parses Stardust from Pokémon detail screenshot text', () => {
+    const text = `
+Pikachu
+86 / 86 HP
+7.4kg WEIGHT  ELECTRIC  0.46m HEIGHT
+5,163,855
+STARDUST
+17,797
+PIKACHU CANDY
+    `;
+    const result = parseProfileStats(text);
+    expect(result?.stardust).toBe(5163855);
+  });
+
   it('parses walking distance with miles', () => {
     const text = `
 Level 32
@@ -436,5 +450,172 @@ BUDDY SCRAPBOOK
     `;
     const result = parseProfileStats(text);
     expect(result?.level).toBe(80);
+  });
+
+  it('parses stardust 5163855 from pikachu detail screen with section sign symbol', () => {
+    const text = `
+7:249) d o aE
+RY x
+»"
+a . y
+4h,
+= 0.9, NL
+SIN
+J/
+Pikachu /’
+
+86/86 HP ?
+74kg | ® | 046m
+WEIGHT ELECTRIC HEIGHT
+
+§5163855 OQ 17,797 § 1,044
+STARDUST PIKACHU CANDY PIKACHU CANDY
+XL
+    `;
+    const result = parseProfileStats(text);
+    expect(result).toBeTruthy();
+    expect(result?.stardust).toBe(5163855);
+    expect(result?.level).toBeNull();
+    expect(result?.pokemonCaught).toBeNull();
+    expect(result?.username).toBeNull();
+  });
+
+  it('parses clean stardust 5343876 from Fennekin screenshot 1 stripping leading icon artifact', () => {
+    const text = `
+Ww 0
+a I@
+Ze @
+| Wig =
+Ji
+Fennekin /’
+12/12HP of
+123kg | S | 041m
+WEIGHT FIRE HEIGHT
+15343876 2,387 S340
+STARDUST FENNEKIN CANDY FENNEKIN CANDY
+XL
+GYMS & RAIDS TRAINER BATTLES
+(0) Scratch
+WEATHER BONUS
+VST y = J rr
+    `;
+    const result = parseProfileStats(text);
+    expect(result).toBeTruthy();
+    expect(result?.stardust).toBe(5343876);
+  });
+
+  it('parses clean stardust 5344076 from Fennekin screenshot 2 ignoring weight line 11.51kg', () => {
+    const text = `
+11:00 7 J a DCD
+0 ce 1v.9, &
+no
+WA
+~ 7 /
+~ Pe fi
+Ves
+IIL
+Fennekin /’
+42/42 HP of
+11.51kg | S | 0.45m
+WEIGHT FIRE HEIGHT
+15,344,076 © 2,399 S341
+STARDUST FENNEKIN CANDY FENNEKIN CANDY
+XL
+GYMS & RAIDS TRAINER BATTLES
+(0) Scratch
+WEATHER BONUS
+y OR yr Fr ____F¥ J Ve a
+
+11:09 94 all © E
+cpl/9 ke
+’ 0
+’
+/
+: N
+Vg /
+Fennekin
+42 / 42 HP
+11.51kg 0.45m
+N 5,344,076 = 2,399 & 341
+4 800 S1
+his = 25
+Ww
+GYMS & RAIDS
+Scratch ©
+&) WEATHER BONUS
+    `;
+    const result = parseProfileStats(text);
+    expect(result).toBeTruthy();
+    expect(result?.stardust).toBe(5344076);
+  });
+
+  it('parses clean stardust 5343876 from Fennekin screenshot 3 rejecting status bar time 10:2449', () => {
+    const text = `
+10:2449 | wl 2 [0
+cpl3 Ig
+{
+J
+[ J / 3 @ ’
+Fennekin
+12/12HP
+12.3kg 0.41m
+15,343,876 2,387 S 340
+4 200 S1
+54 S25
+b)dd
+GYMS & RAIDS
+Scratch ©
+&) WEATHER BONUS
+    `;
+    const result = parseProfileStats(text);
+    expect(result).toBeTruthy();
+    expect(result?.stardust).toBe(5343876);
+  });
+
+  it('parses clean stardust 5163855 from Pikachu screenshot rejecting top CP noise 1029 and stripping leading icon 4', () => {
+    const text = `
+7:249) d o aE
+RY x
+»"
+a . y
+4h,
+= 0.9, NL
+SIN
+J/
+Pikachu /’
+
+86/86 HP ?
+74kg | ® | 046m
+WEIGHT ELECTRIC HEIGHT
+
+§5163855 OQ 17,797 § 1,044
+STARDUST PIKACHU CANDY PIKACHU CANDY
+XL
+Jo Jo
+RAICHU MEGA RAICHU MEGA
+ENERGY X ENERGY Y
+GYMS & RAIDS TRAINER BATTLES
+® Thunder Shock
+® Thunderbolt © 8)
+TTT
+
+7:24.49 ¢ . + ul 56 E83
++ R658
+1029
+Wes
+| © o ge ~~
+Pikachu
+86/86 HP
+7.4kg 0.46m
+45163855 @ 17,797 & 1,044
+vo Qo
+1 5,000 ) 4
+GYMS & RAIDS
+Thunder Shock
+Thunderbolt ©
+    `;
+    const result = parseProfileStats(text);
+    expect(result).toBeTruthy();
+    expect(result?.stardust).toBe(5163855);
   });
 });

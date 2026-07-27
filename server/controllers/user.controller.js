@@ -21,11 +21,12 @@ exports.updateUserPreferences = async (req, res) => {
       return res.status(403).json({ error: 'Not authorized to edit this trainer.' });
     }
 
+    const toNullableBool = (val) => val === true ? true : val === false ? false : null;
     await userRepository.updatePreferences(
       username,
       defaultUnit || 'km',
-      showFunFacts !== false,
-      displayTutorial !== false
+      toNullableBool(showFunFacts),
+      toNullableBool(displayTutorial)
     );
 
     res.json({ success: true });

@@ -123,7 +123,7 @@ describe('UserRepository', () => {
       await userRepository.updatePreferences('testuser', 'mi', true, false);
 
       expect(db.execute).toHaveBeenCalledWith(
-        'UPDATE users SET default_unit = ?, show_fun_facts = ?, display_tutorial = ? WHERE username = ?',
+        'UPDATE users SET default_unit = ?, show_fun_facts = COALESCE(?, show_fun_facts), display_tutorial = COALESCE(?, display_tutorial) WHERE username = ?',
         ['mi', true, false, 'testuser']
       );
     });

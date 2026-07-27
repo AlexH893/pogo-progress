@@ -45,10 +45,17 @@ export class AuthService {
     const userStr = localStorage.getItem('auth_user');
     if (token && userStr) {
       try {
-        // Check if token is expired
-        const payloadStr = atob(token.split('.')[1]);
+        // Safely decode the JWT payload — atob can throw on malformed base64
+        const parts = token.split('.');
+        if (parts.length !== 3) {
+          console.warn('Auth: Stored token is malformed (wrong segment count). Signing out.');
+          this.signOut();
+          return;
+        }
+        const payloadStr = atob(parts[1]);
         const payload = JSON.parse(payloadStr);
         if (payload.exp && payload.exp * 1000 < Date.now()) {
+          // Token has expired — silent sign-out is correct here
           this.signOut();
           return;
         }
@@ -56,6 +63,8 @@ export class AuthService {
         const user = JSON.parse(userStr);
         this.userSubject.next(user);
       } catch (e) {
+        // Token or user JSON is corrupted — warn so it's visible in dev tools
+        console.warn('Auth: Could not restore session due to corrupted storage. Signing out.', e);
         this.signOut();
       }
     }

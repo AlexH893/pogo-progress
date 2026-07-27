@@ -97,4 +97,37 @@ describe('ProgressChartComponent', () => {
     expect(initialInstance!.update).toHaveBeenCalled();
     expect(component.chartInstance?.data.labels?.length).toBe(2);
   });
+
+  describe('level 80 behavior', () => {
+    it('should identify level 80 correctly and hide level tab', () => {
+      component.username = 'Trainer';
+      component.userHistory = [{ created_at: '2024-01-01', level: 80, total_xp: 200000000 }];
+      fixture.detectChanges();
+
+      expect(component.isLevel80).toBeTrue();
+      const buttons = fixture.nativeElement.querySelectorAll('.chart-tab');
+      const buttonTexts = Array.from(buttons).map((b: any) => b.textContent.trim());
+      expect(buttonTexts).not.toContain('Level');
+    });
+
+    it('should show level tab when user is below level 80', () => {
+      component.username = 'Trainer';
+      component.userHistory = [{ created_at: '2024-01-01', level: 50, total_xp: 100000000 }];
+      fixture.detectChanges();
+
+      expect(component.isLevel80).toBeFalse();
+      const buttons = fixture.nativeElement.querySelectorAll('.chart-tab');
+      const buttonTexts = Array.from(buttons).map((b: any) => b.textContent.trim());
+      expect(buttonTexts).toContain('Level');
+    });
+
+    it('should prevent setting metric to level if user is level 80 and fallback to total_xp', () => {
+      component.username = 'Trainer';
+      component.userHistory = [{ created_at: '2024-01-01', level: 80, total_xp: 200000000 }];
+      fixture.detectChanges();
+
+      component.setMetric('level');
+      expect(component.selectedMetric).toBe('total_xp');
+    });
+  });
 });

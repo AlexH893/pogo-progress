@@ -15,8 +15,11 @@ describe('StatsRepository', () => {
 
       const result = await statsRepository.getPreviousStats('testuser', '2023-01-01');
 
+      // Bug #5 fix: query must use strict `<` so a row at the exact same
+      // timestamp is never returned as "previous" stats (which would cause
+      // all diffs to show 0).
       expect(db.execute).toHaveBeenCalledWith(
-        'SELECT * FROM stats WHERE username = ? AND created_at <= ? AND is_deleted = 0 ORDER BY created_at DESC LIMIT 1',
+        'SELECT * FROM stats WHERE username = ? AND created_at < ? AND is_deleted = 0 ORDER BY created_at DESC LIMIT 1',
         ['testuser', '2023-01-01']
       );
       expect(result).toEqual(mockRow);
@@ -28,6 +31,20 @@ describe('StatsRepository', () => {
       const result = await statsRepository.getPreviousStats('testuser', '2023-01-01');
 
       expect(result).toBeNull();
+    });
+
+    // Regression: Bug #5 — uploading two entries at the same timestamp
+    // previously caused the new row to be returned as its own previousStats,
+    // making all diffs show 0. Verify the query uses strict `<`.
+    it('should use strict < comparison so same-timestamp rows are excluded', async () => {
+      db.execute.mockResolvedValue([[]]);
+      const sameTimestamp = '2024-06-15T12:00:00.000Z';
+
+      await statsRepository.getPreviousStats('testuser', sameTimestamp);
+
+      const [sql] = db.execute.mock.calls[0];
+      expect(sql).toContain('created_at <');
+      expect(sql).not.toContain('created_at <=');
     });
   });
 
@@ -60,8 +77,8 @@ describe('StatsRepository', () => {
       const result = await statsRepository.insertStat('testuser', 40, 100, 500, 200, 1000, 'entry', '2023-01-01');
 
       expect(db.execute).toHaveBeenCalledWith(
-        'INSERT INTO stats (username, level, distance_walked, caught, stop_visited, total_xp, entry_name, created_at, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))',
-        ['testuser', 40, 100, 500, 200, 1000, 'entry', '2023-01-01', null]
+        'INSERT INTO stats (username, level, distance_walked, caught, stop_visited, total_xp, stardust, entry_name, created_at, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))',
+        ['testuser', 40, 100, 500, 200, 1000, null, 'entry', '2023-01-01', null]
       );
       expect(result).toBe(42);
     });
@@ -97,8 +114,8 @@ describe('StatsRepository', () => {
       await statsRepository.updateStat(1, 'testuser', 40, 100, 500, 200, 1000, 'entry', '2023-01-01');
 
       expect(db.execute).toHaveBeenCalledWith(
-        'UPDATE stats SET username = ?, level = ?, distance_walked = ?, caught = ?, stop_visited = ?, total_xp = ?, entry_name = ?, created_at = ? WHERE id = ?',
-        ['testuser', 40, 100, 500, 200, 1000, 'entry', '2023-01-01', 1]
+        'UPDATE stats SET username = ?, level = ?, distance_walked = ?, caught = ?, stop_visited = ?, total_xp = ?, stardust = ?, entry_name = ?, created_at = ? WHERE id = ?',
+        ['testuser', 40, 100, 500, 200, 1000, null, 'entry', '2023-01-01', 1]
       );
     });
 
@@ -108,8 +125,8 @@ describe('StatsRepository', () => {
       await statsRepository.updateStat(1, 'testuser', 40, 100, 500, 200, 1000, 'entry');
 
       expect(db.execute).toHaveBeenCalledWith(
-        'UPDATE stats SET username = ?, level = ?, distance_walked = ?, caught = ?, stop_visited = ?, total_xp = ?, entry_name = ? WHERE id = ?',
-        ['testuser', 40, 100, 500, 200, 1000, 'entry', 1]
+        'UPDATE stats SET username = ?, level = ?, distance_walked = ?, caught = ?, stop_visited = ?, total_xp = ?, stardust = ?, entry_name = ? WHERE id = ?',
+        ['testuser', 40, 100, 500, 200, 1000, null, 'entry', 1]
       );
     });
   });
@@ -169,7 +186,7 @@ describe('StatsRepository', () => {
       const result = await statsRepository.getStatsByUsername('testuser');
 
       expect(db.execute).toHaveBeenCalledWith(
-        'SELECT id, username, level, distance_walked, caught, stop_visited, total_xp, entry_name, created_at FROM stats WHERE username = ? AND is_deleted = 0 ORDER BY created_at ASC',
+        'SELECT id, username, level, distance_walked, caught, stop_visited, total_xp, stardust, entry_name, created_at, uploaded_at FROM stats WHERE username = ? AND is_deleted = 0 ORDER BY created_at ASC',
         ['testuser']
       );
       expect(result).toEqual(mockRows);
@@ -218,7 +235,7 @@ describe('StatsRepository', () => {
       const result = await statsRepository.getPaginatedStatsByUsername('testuser', undefined, undefined);
 
       expect(db.execute).toHaveBeenCalledWith(
-        'SELECT id, username, level, distance_walked, caught, stop_visited, total_xp, entry_name, created_at FROM stats WHERE username = ? AND is_deleted = 0 ORDER BY created_at DESC LIMIT 50 OFFSET 0',
+        'SELECT id, username, level, distance_walked, caught, stop_visited, total_xp, stardust, entry_name, created_at, uploaded_at FROM stats WHERE username = ? AND is_deleted = 0 ORDER BY created_at DESC LIMIT 50 OFFSET 0',
         ['testuser']
       );
       expect(result).toEqual(mockRows);

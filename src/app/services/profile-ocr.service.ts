@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { ProfileStats, ProfileOcrResult } from '../models/profile-stats';
-import { parseProfileStats } from '../utils/profile-stats.parser';
+import { parseProfileStats, isPokemonDetailScreen } from '../utils/profile-stats.parser';
 
 declare const cv: any;
 
@@ -65,15 +65,32 @@ export class ProfileOcrService {
       const fullBinarizedText = fullBinarizedResult.text;
 
       const upperText = fullBinarizedText.toUpperCase();
-      const hasEnglishLabels = /TOTAL ACTIVITY|DISTANCE WALKED|CAUGHT|VISITED|POKEMON|POKESTOP/.test(upperText);
-      const hasBasicProfileIndicators = /LEVEL|XP|\d{1,3},\d{3}/.test(upperText) || upperText.includes('/');
+      const isPokemonDetail = isPokemonDetailScreen(fullBinarizedText);
+      const hasEnglishLabels = /TOTAL ACTIVITY|DISTANCE WALKED|CAUGHT|VISITED|POKEMON|POKESTOP|STARDUST|CANDY|POWER\s*UP|WEIGHT|HEIGHT/.test(upperText);
+      const hasBasicProfileIndicators = /LEVEL|XP|STARDUST|CANDY|POWER\s*UP|WEIGHT|HEIGHT|\d{1,3},\d{3}/.test(upperText) || upperText.includes('/');
 
       if (!hasBasicProfileIndicators && !hasEnglishLabels) {
-        throw new InvalidScreenshotError('This does not appear to be a Pokémon GO trainer profile screenshot. Please ensure you are on the profile screen.', fullBinarizedText);
+        throw new InvalidScreenshotError('This does not appear to be a Pokémon GO trainer profile or Pokémon detail screenshot. Please ensure you upload a valid screenshot.', fullBinarizedText);
       }
       
       if (hasBasicProfileIndicators && !hasEnglishLabels) {
-        throw new InvalidScreenshotError('It looks like your game might be in another language or the image is too blurry. Currently, only English profile screenshots are supported.', fullBinarizedText);
+        throw new InvalidScreenshotError('It looks like your game might be in another language or the image is too blurry. Currently, only English profile and Pokémon detail screenshots are supported.', fullBinarizedText);
+      }
+
+      if (isPokemonDetail) {
+        const pass1RawResult = await this.recognize(worker, rawCanvas, PSM.SINGLE_BLOCK);
+        const pass1RawText = pass1RawResult.text;
+        const rawStats = parseProfileStats(pass1RawText);
+        const stardustStats = parseProfileStats(fullBinarizedText);
+        const mergedStardustStats = this.mergeStats(rawStats, stardustStats);
+        if (mergedStardustStats) {
+          return { stats: mergedStardustStats, rawText: [fullBinarizedText, pass1RawText].join('\n') };
+        }
+      } else {
+        const stardustStats = parseProfileStats(fullBinarizedText);
+        if (stardustStats && stardustStats.stardust != null) {
+          return { stats: stardustStats, rawText: fullBinarizedText };
+        }
       }
 
 
@@ -153,18 +170,38 @@ export class ProfileOcrService {
     if (!primary && !secondary) return null;
     if (!primary) return secondary;
     if (!secondary) return primary;
-    return {
+    const mergedStats: ProfileStats = {
       ...primary,
       level: primary.level ?? secondary.level,
       distanceWalked: primary.distanceWalked ?? secondary.distanceWalked,
       distanceUnit: primary.distanceUnit ?? secondary.distanceUnit,
       pokemonCaught: primary.pokemonCaught ?? secondary.pokemonCaught,
       pokestopsVisited: primary.pokestopsVisited ?? secondary.pokestopsVisited,
-      totalXp: Math.max(primary.totalXp ?? 0, secondary.totalXp ?? 0) || null,
+      totalXp: primary.totalXp ?? secondary.totalXp,
       username: (primary.username && secondary.username)
         ? (primary.username.length >= secondary.username.length ? primary.username : secondary.username)
         : (primary.username ?? secondary.username),
     };
+
+    if (primary.stardust !== undefined || secondary.stardust !== undefined) {
+      const pDust = primary.stardust;
+      const sDust = secondary.stardust;
+
+      if (pDust != null && sDust != null && pDust !== sDust) {
+        // Handle leading 1 icon artifact (e.g. 15,343,876 vs 5,343,876)
+        if (pDust >= 10_000_000 && pDust - 10_000_000 === sDust) {
+          mergedStats.stardust = sDust;
+        } else if (sDust >= 10_000_000 && sDust - 10_000_000 === pDust) {
+          mergedStats.stardust = pDust;
+        } else {
+          mergedStats.stardust = pDust ?? sDust;
+        }
+      } else {
+        mergedStats.stardust = pDust ?? sDust ?? null;
+      }
+    }
+
+    return mergedStats;
   }
 
   private loadImage(file: File): Promise<{ img: HTMLImageElement; url: string }> {

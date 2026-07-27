@@ -59,9 +59,14 @@ cypress-debug.log
 
 
 # Scratch and debug files
-fix-*.js
-test-*.js
+find-unused-css.js
+scripts/find-unused-css.js
+test-db.js
+test-layout.js
+cypress_dom.html
+scripts/fix-*.js
+scripts/test-*.js
+scripts/add-post-data.js
 error*.txt
-add-post-data.js
 
 *.log*

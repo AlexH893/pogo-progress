@@ -40,7 +40,7 @@ class UserRepository {
 
   async updatePreferences(username, defaultUnit, showFunFacts, displayTutorial) {
     await db.execute(
-        'UPDATE users SET default_unit = ?, show_fun_facts = ?, display_tutorial = ? WHERE username = ?',
+        'UPDATE users SET default_unit = ?, show_fun_facts = COALESCE(?, show_fun_facts), display_tutorial = COALESCE(?, display_tutorial) WHERE username = ?',
         [defaultUnit, showFunFacts, displayTutorial, username]
       );
   }

@@ -14,6 +14,7 @@ import { getApiUrl } from '../config';
 import { AuthService } from '../services/auth.service';
 import exifr from 'exifr';
 import { levenshtein } from '../utils/levenshtein';
+import { isPokemonDetailScreen } from '../utils/profile-stats.parser';
 
 type PageState = 'idle' | 'processing' | 'success' | 'error';
 
@@ -55,6 +56,7 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   screenshotDate: Date | null = null;
   usedFallbackDate: boolean = false;
+  isStardustOnlyUpload: boolean = false;
 
   editingFields: Record<keyof ProfileStats | 'createdAt', boolean> = {
     level: false,
@@ -63,6 +65,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     pokemonCaught: false,
     pokestopsVisited: false,
     totalXp: false,
+    stardust: false,
     username: false,
     entryName: false,
     createdAt: false,
@@ -76,6 +79,8 @@ export class HomeComponent implements OnInit, OnDestroy {
   private demoTimeoutIds: any[] = [];
 
   private authSub: Subscription | null = null;
+  private hasPostedStats = false; // Bug 2: guard against double-post for logged-in users
+  private cachedPrefs: any = null; // Bug 4: cache to avoid double /user-preferences fetch
 
   constructor(
     private readonly profileOcr: ProfileOcrService, 
@@ -88,24 +93,31 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.authSub = this.authService.user$.subscribe(user => {
-      // If user logs in after uploading a screenshot
-      if (user && this.state === 'success' && this.stats && !this.currentStatId) {
+      // Clear stale cached prefs when the user signs out (Bug 4)
+      if (!user) {
+        this.cachedPrefs = null;
+        return;
+      }
+
+      // If user logs in *after* uploading a screenshot, post the pending stats.
+      // The !hasPostedStats guard prevents a double-POST when the user was already
+      // signed in and processFile already called postStatsToBackend() (Bug 2).
+      if (this.state === 'success' && this.stats && !this.currentStatId && !this.hasPostedStats) {
         this.postStatsToBackend();
       }
 
       // Fetch user preferences to initialize UI settings like the tutorial button
-      if (user) {
-        this.http.get<any[]>(`${getApiUrl()}/user-preferences`).subscribe({
-          next: (prefs) => {
-            if (prefs && prefs.length > 0) {
-              const pref = prefs[0];
-              this.knownTrainerName = pref.username;
-              this.displayTutorialEnabled = pref.display_tutorial !== 0 && pref.display_tutorial !== false;
-            }
-          },
-          error: (err) => console.error('Failed to load preferences on init', err)
-        });
-      }
+      this.http.get<any[]>(`${getApiUrl()}/user-preferences`).subscribe({
+        next: (prefs) => {
+          if (prefs && prefs.length > 0) {
+            const pref = prefs[0];
+            this.cachedPrefs = pref; // Bug 4: cache for use in processFile
+            this.knownTrainerName = pref.username;
+            this.displayTutorialEnabled = pref.display_tutorial !== 0 && pref.display_tutorial !== false;
+          }
+        },
+        error: (err) => console.error('Failed to load preferences on init', err)
+      });
     });
   }
 
@@ -119,6 +131,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   postStatsToBackend() {
     if (!this.username || !this.stats) return;
 
+    this.hasPostedStats = true; // Bug 2: prevent re-fire from auth subscription
     this.isPostingStats = true;
     this.http
       .post<{success: boolean, statId?: number, previousStats?: any}>(`${getApiUrl()}/post-data`, { 
@@ -128,8 +141,10 @@ export class HomeComponent implements OnInit, OnDestroy {
         caught: this.stats.pokemonCaught,
         stopVisited: this.stats.pokestopsVisited,
         totalXp: this.stats.totalXp,
+        stardust: this.stats.stardust,
         entryName: this.stats.entryName,
-        createdAt: this.screenshotDate ? this.screenshotDate.toISOString() : undefined
+        createdAt: this.screenshotDate ? this.screenshotDate.toISOString() : undefined,
+        uploadedAt: new Date().toISOString() // Bug 3: record actual upload timestamp
       })
       .subscribe({
         next: (res) => {
@@ -189,7 +204,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     return `${formatted} ${unit}`;
   }
 
-  formatCount(value: number | null): string {
+  formatCount(value: number | null | undefined): string {
     return (value !== null && value !== undefined) ? value.toLocaleString() : '—';
   }
 
@@ -219,6 +234,8 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.isAnimating = false;
     this.screenshotDate = null;
     this.usedFallbackDate = false;
+    this.isStardustOnlyUpload = false;
+    this.hasPostedStats = false; // Bug 2: allow a fresh post for each new upload
     this.editingFields = {
       level: false,
       distanceWalked: false,
@@ -226,6 +243,7 @@ export class HomeComponent implements OnInit, OnDestroy {
       pokemonCaught: false,
       pokestopsVisited: false,
       totalXp: false,
+      stardust: false,
       username: false,
       entryName: false,
       createdAt: false,
@@ -257,9 +275,32 @@ export class HomeComponent implements OnInit, OnDestroy {
 
     try {
       const result = await this.profileOcr.extractFromFile(file);
-      this.username = result.stats.username || '';
-      this.stats = result.stats;
-      this.displayStats = { ...result.stats };
+      const isStardustOnly = isPokemonDetailScreen(result.rawText) || (
+        result.stats.stardust !== undefined && 
+        result.stats.stardust !== null && 
+        result.stats.level === null && 
+        result.stats.distanceWalked === null && 
+        result.stats.totalXp === null
+      );
+
+      let extractedUsername = isStardustOnly
+        ? (this.knownTrainerName || this.username)
+        : (result.stats.username || this.knownTrainerName || this.username);
+
+      if (isStardustOnly && !extractedUsername) {
+        throw new InvalidScreenshotError('Please upload a Trainer Profile screenshot first so we know which profile to link your Stardust to!', result.rawText);
+      }
+
+      this.isStardustOnlyUpload = isStardustOnly;
+      this.username = extractedUsername || '';
+      this.stats = { ...result.stats, username: this.username };
+
+      // Bug 7: Leading-1 icon artifact correction is done later in calculateDiffs()
+      // where previousStats/userHistory are populated and context is richer.
+      // Doing it here was dead code (userHistory and previousStats are always empty
+      // at this point in processFile) and risked double-correcting if both fired.
+
+      this.displayStats = { ...this.stats };
       this.rawOcrText = result.rawText;
       const applySuccessState = () => {
         this.state = 'success';
@@ -272,57 +313,59 @@ export class HomeComponent implements OnInit, OnDestroy {
         applySuccessState();
       }
       
-      // Load user preferences before generating fun facts
+      // Load user preferences — use cache if already fetched to avoid a double
+      // round-trip (ngOnInit also fetches on auth state change) (Bug 4).
       if (this.username && this.authService.getToken()) {
-        try {
-          const prefs = await this.http.get<any[]>(`${getApiUrl()}/user-preferences`).toPromise();
-          const userPref = prefs && prefs.length > 0 ? prefs[0] : undefined;
-          
-          if (userPref) {
-            this.knownTrainerName = userPref.username;
-
-            if (this.knownTrainerName && this.username !== this.knownTrainerName) {
-              const editDist = levenshtein(this.username, this.knownTrainerName);
-
-              if (editDist <= 1) {
-                // Looks like an OCR typo — silently correct
-                console.log(`Correcting OCR typo: "${this.username}" → "${this.knownTrainerName}" (edit distance ${editDist})`);
-                this.username = this.knownTrainerName;
-                this.stats.username = this.knownTrainerName;
-                if (this.displayStats) this.displayStats.username = this.knownTrainerName;
-              } else {
-                // Clearly a different trainer — block and ask the user to confirm
-                console.warn(`Username mismatch: OCR read "${this.username}", linked trainer is "${this.knownTrainerName}" (edit distance ${editDist})`);
-                this.ocrUsername = this.username;
-                this.usernameMismatch = true;
-                this.editingFields.username = true;
-              }
-            }
-
-            // Apply default unit if OCR didn't catch it
-            if (!this.stats.distanceUnit) {
-              this.stats.distanceUnit = userPref.default_unit;
-              if (this.displayStats) this.displayStats.distanceUnit = userPref.default_unit;
-            }
-            
-            this.showFunFactsEnabled = !!userPref.show_fun_facts;
-            this.displayTutorialEnabled = userPref.display_tutorial !== 0 && userPref.display_tutorial !== false;
-
-            // Only generate fun facts if enabled
-            if (this.showFunFactsEnabled) {
-              this.generateFunFacts();
-            } else {
-              this.funFact = null;
-              this.allFunFacts = [];
-            }
-          } else {
-            // Default behavior if no preferences found
-            this.showFunFactsEnabled = true;
-            this.displayTutorialEnabled = true;
-            this.generateFunFacts();
+        let userPref = this.cachedPrefs;
+        if (!userPref) {
+          try {
+            const prefs = await this.http.get<any[]>(`${getApiUrl()}/user-preferences`).toPromise();
+            userPref = prefs && prefs.length > 0 ? prefs[0] : undefined;
+            if (userPref) this.cachedPrefs = userPref;
+          } catch (err) {
+            console.error('Failed to load preferences for stats rendering:', err);
           }
-        } catch (err) {
-          console.error('Failed to load preferences for stats rendering:', err);
+        }
+
+        if (userPref) {
+          this.knownTrainerName = userPref.username;
+
+          if (this.knownTrainerName && this.username !== this.knownTrainerName && !isStardustOnly) {
+            const editDist = levenshtein(this.username, this.knownTrainerName);
+
+            if (editDist <= 1) {
+              // Looks like an OCR typo — silently correct
+              console.log(`Correcting OCR typo: "${this.username}" → "${this.knownTrainerName}" (edit distance ${editDist})`);
+              this.username = this.knownTrainerName;
+              this.stats.username = this.knownTrainerName;
+              if (this.displayStats) this.displayStats.username = this.knownTrainerName;
+            } else {
+              // Clearly a different trainer — block and ask the user to confirm
+              console.warn(`Username mismatch: OCR read "${this.username}", linked trainer is "${this.knownTrainerName}" (edit distance ${editDist})`);
+              this.ocrUsername = this.username;
+              this.usernameMismatch = true;
+              this.editingFields.username = true;
+            }
+          }
+
+          // Apply default unit if OCR didn't catch it
+          if (!this.stats.distanceUnit) {
+            this.stats.distanceUnit = userPref.default_unit;
+            if (this.displayStats) this.displayStats.distanceUnit = userPref.default_unit;
+          }
+
+          this.showFunFactsEnabled = !!userPref.show_fun_facts;
+          this.displayTutorialEnabled = userPref.display_tutorial !== 0 && userPref.display_tutorial !== false;
+
+          // Only generate fun facts if enabled
+          if (this.showFunFactsEnabled) {
+            this.generateFunFacts();
+          } else {
+            this.funFact = null;
+            this.allFunFacts = [];
+          }
+        } else {
+          // Default behavior if no preferences found
           this.showFunFactsEnabled = true;
           this.displayTutorialEnabled = true;
           this.generateFunFacts();
@@ -368,47 +411,65 @@ export class HomeComponent implements OnInit, OnDestroy {
     }
   }
 
-  submitCorrection(field: keyof ProfileStats | 'createdAt', value: string): void {
-    if (!this.stats) return;
-
-    // Fix Race Condition: If the initial background save is still running, 
-    // queue the correction to run shortly after it finishes so we don't duplicate entries.
-    if (this.isPostingStats) {
-      setTimeout(() => this.submitCorrection(field, value), 200);
-      return;
-    }
-
-    if (this.usernameMismatch && field !== 'username') {
-      this.errorMessage = 'Please confirm your trainer name before saving other corrections.';
+  submitCorrection(field: keyof ProfileStats | 'createdAt', value: string, maxRetries?: number): void {
+    if (!this.stats) {
       this.editingFields[field] = false;
       this.cdr.detectChanges();
       return;
     }
 
+    // Fix Race Condition: If the initial background save is still running,
+    // queue the correction to run shortly after it finishes so we don't duplicate entries.
+    // Guard with a max-retry count so we never spin forever if isPostingStats gets stuck.
+    if (this.isPostingStats) {
+      const retriesLeft = (maxRetries ?? 10) - 1;
+      if (retriesLeft <= 0) {
+        console.warn('submitCorrection: gave up waiting for isPostingStats to clear; skipping.');
+        this.editingFields[field] = false;
+        this.cdr.detectChanges();
+        return;
+      }
+      setTimeout(() => this.submitCorrection(field, value, retriesLeft), 200);
+      return;
+    }
+
+    // Always exit editing mode for this field when submitting or blurring
+    this.editingFields[field] = false;
+
+    if (this.usernameMismatch && field !== 'username') {
+      this.errorMessage = 'Please confirm your trainer name before saving other corrections.';
+      this.cdr.detectChanges();
+      return;
+    }
+
+    let hasChanged = false;
+
     if (field === 'username') {
-      if (!value.trim()) return; // don't save a blank username
-      this.stats.username = value.trim();
-      this.username = value.trim();
-      // Clear any mismatch warning once the user has confirmed their trainer name
-      this.usernameMismatch = false;
-      this.ocrUsername = '';
+      if (value.trim()) {
+        this.stats.username = value.trim();
+        this.username = value.trim();
+        this.usernameMismatch = false;
+        this.ocrUsername = '';
+        hasChanged = true;
+      }
     } else if (field === 'entryName') {
-      this.stats.entryName = value;
+      if (value !== (this.stats.entryName ?? '')) {
+        this.stats.entryName = value;
+        hasChanged = true;
+      }
     } else if (field === 'createdAt' as any) {
       const parsedDate = new Date(value);
       if (!Number.isNaN(parsedDate.getTime())) {
         this.screenshotDate = parsedDate;
-      } else {
-        return;
+        hasChanged = true;
       }
     } else if (field === 'distanceWalked') {
       const parsed = parseFloat(value);
       if (!Number.isNaN(parsed)) {
         this.stats.distanceWalked = Math.max(0, Math.min(1000000, parsed));
         if (this.displayStats) this.displayStats.distanceWalked = this.stats.distanceWalked;
-        if (!this.stats.distanceUnit) this.stats.distanceUnit = 'km'; // default
-      } else {
-        return;
+        if (!this.stats.distanceUnit) this.stats.distanceUnit = 'km';
+        hasChanged = true;
       }
     } else {
       let parsed = parseInt(value, 10);
@@ -417,16 +478,20 @@ export class HomeComponent implements OnInit, OnDestroy {
         else if (field === 'totalXp') parsed = Math.max(0, Math.min(2000000000, parsed));
         else if (field === 'pokemonCaught') parsed = Math.max(0, Math.min(99999999, parsed));
         else if (field === 'pokestopsVisited') parsed = Math.max(0, Math.min(99999999, parsed));
+        else if (field === 'stardust') parsed = Math.max(0, Math.min(99999999999, parsed));
 
         (this.stats as any)[field] = parsed;
         if (this.displayStats) (this.displayStats as any)[field] = parsed;
-      } else {
-        return;
+        hasChanged = true;
       }
     }
 
-    this.editingFields[field] = false;
     this.calculateDiffs(false);
+    this.cdr.detectChanges();
+
+    if (!hasChanged) {
+      return; // Exit edit mode cleanly without persisting invalid/unchanged data
+    }
     
     if (this.showFunFactsEnabled) {
       this.generateFunFacts();
@@ -442,8 +507,10 @@ export class HomeComponent implements OnInit, OnDestroy {
       caught: this.stats.pokemonCaught,
       stopVisited: this.stats.pokestopsVisited,
       totalXp: this.stats.totalXp,
+      stardust: this.stats.stardust,
       entryName: this.stats.entryName,
-      createdAt: this.screenshotDate ? this.screenshotDate.toISOString() : undefined
+      createdAt: this.screenshotDate ? this.screenshotDate.toISOString() : undefined,
+      uploadedAt: new Date().toISOString() // Bug 3: record actual upload timestamp
     };
 
     if (!this.authService.getToken()) {
@@ -493,42 +560,141 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.http.get<any[]>(`${getApiUrl()}/get-user-stats/${encodeURIComponent(username)}`).subscribe({
       next: (data) => {
         this.userHistory = data;
+        if (this.stats) {
+          this.calculateDiffs(true);
+        }
       },
       error: (err) => console.error('Failed to fetch user history:', err),
     });
   }
 
   calculateDiffs(animate: boolean = true): void {
-    if (!this.stats || !this.previousStats) {
+    const hasPastHistory = !!this.previousStats || (this.userHistory && this.userHistory.length > 0);
+    if (!this.stats || !hasPastHistory) {
       this.statDiffs = null;
       this.dailyAverages = null;
       this.diffDays = 0;
       return;
     }
 
-    const diffs = {
-      level: (this.stats.level || 0) - (this.previousStats.level || 0),
-      distanceWalked: (this.stats.distanceWalked || 0) - (this.previousStats.distance_walked || 0),
-      pokemonCaught: (this.stats.pokemonCaught || 0) - (this.previousStats.caught || 0),
-      pokestopsVisited: (this.stats.pokestopsVisited || 0) - (this.previousStats.stop_visited || 0),
-      totalXp: (this.stats.totalXp || 0) - (this.previousStats.total_xp || 0),
+    const getPrevStardustVal = (): number | null => {
+      let rawVal: number | null = null;
+      if (this.previousStats) {
+        if (this.previousStats.stardust != null) rawVal = Number(this.previousStats.stardust);
+        else if (this.previousStats.previousStardust != null) rawVal = Number(this.previousStats.previousStardust);
+      }
+      if (rawVal === null && this.userHistory && this.userHistory.length > 0) {
+        const pastRows = this.userHistory.filter((r: any) => r.id !== this.currentStatId);
+        const rowWithStardust = pastRows.find((r: any) => r.stardust != null);
+        if (rowWithStardust) rawVal = Number(rowWithStardust.stardust);
+      }
+      // Safe correction for leading-1 artifact on previous stardust:
+      // If previous stardust is in [10M, 20M) and the current stardust is smaller,
+      // or the uncorrected difference represents an impossible large drop but
+      // the corrected difference is small/reasonable, strip the leading 1.
+      if (rawVal != null && rawVal >= 10_000_000 && rawVal < 20_000_000 && this.stats?.stardust != null) {
+        const currentDust = this.stats.stardust;
+        const uncorrectedDiff = currentDust - rawVal;
+        const correctedPrev = rawVal - 10_000_000;
+        const correctedDiff = currentDust - correctedPrev;
+        if (uncorrectedDiff < -1_000_000 && correctedDiff >= -1_000_000 && correctedDiff <= 1_000_000) {
+          rawVal = correctedPrev;
+        }
+      }
+      return rawVal;
     };
-    
-    console.log('calculated diffs:', diffs);
-    console.log('this.stats:', this.stats);
-    console.log('this.previousStats:', this.previousStats);
+
+    const prevStardust = getPrevStardustVal();
+
+    // Auto-correct leading 1 icon artifact on Stardust (e.g. 15,343,876 when previous stardust was 5,343,551)
+    if (
+      this.stats?.stardust != null &&
+      this.stats.stardust >= 10_000_000 &&
+      prevStardust != null &&
+      prevStardust < 10_000_000
+    ) {
+      const correctedDust = this.stats.stardust - 10_000_000;
+      const diffWithCorrection = correctedDust - prevStardust;
+      const originalDiff = this.stats.stardust - prevStardust;
+      if (originalDiff >= 9_000_000 && diffWithCorrection >= -1_000_000 && diffWithCorrection <= 1_000_000) {
+        this.stats.stardust = correctedDust;
+        if (this.displayStats) {
+          this.displayStats.stardust = correctedDust;
+        }
+      }
+    }
+
+    // Stardust-only uploads: only compute the stardust diff, skip profile metrics
+    if (this.isStardustOnlyUpload) {
+      if (
+        this.stats.stardust != null &&
+        prevStardust != null
+      ) {
+        const stardustDiff = (this.stats.stardust || 0) - prevStardust;
+        if (stardustDiff !== 0) {
+          this.statDiffs = { level: 0, distanceWalked: 0, pokemonCaught: 0, pokestopsVisited: 0, totalXp: 0, stardust: stardustDiff };
+          const now = this.screenshotDate ? this.screenshotDate.getTime() : Date.now();
+          const prevCreatedAt = this.previousStats?.created_at || (this.userHistory && this.userHistory.length > 0 ? this.userHistory.find((r: any) => r.id !== this.currentStatId)?.created_at : null);
+          const prevDate = prevCreatedAt ? new Date(prevCreatedAt).getTime() : now;
+          this.diffDays = Math.max((now - prevDate) / (1000 * 60 * 60 * 24), 0);
+          this.dailyAverages = this.diffDays >= 1
+            ? { level: 0, distanceWalked: 0, pokemonCaught: 0, pokestopsVisited: 0, totalXp: 0, stardust: stardustDiff / this.diffDays }
+            : null;
+          if (animate) {
+            this.startAnimations();
+          }
+        } else {
+          this.statDiffs = null;
+          this.dailyAverages = null;
+          this.diffDays = 0;
+        }
+      } else {
+        console.log('[DEBUG Stardust] Stardust-only upload missing current or prev stardust. current:', this.stats.stardust, 'prev:', prevStardust);
+        this.statDiffs = null;
+        this.dailyAverages = null;
+        this.diffDays = 0;
+      }
+      return;
+    }
+
+    // Bug 6: When previousStats is null (e.g. first upload, or response dropped),
+    // fall back to userHistory for all fields — previously only stardust had this fallback.
+    const getPrevValue = (dbField: string): number => {
+      if (this.previousStats && this.previousStats[dbField] != null) {
+        return Number(this.previousStats[dbField]) || 0;
+      }
+      if (this.userHistory && this.userHistory.length > 0) {
+        const pastRows = this.userHistory.filter((r: any) => r.id !== this.currentStatId);
+        const row = pastRows.find((r: any) => r[dbField] != null);
+        if (row) return Number(row[dbField]) || 0;
+      }
+      return 0;
+    };
+
+    const diffs: { level: number; distanceWalked: number; pokemonCaught: number; pokestopsVisited: number; totalXp: number; stardust?: number } = {
+      level: (this.stats.level || 0) - getPrevValue('level'),
+      distanceWalked: (this.stats.distanceWalked || 0) - getPrevValue('distance_walked'),
+      pokemonCaught: (this.stats.pokemonCaught || 0) - getPrevValue('caught'),
+      pokestopsVisited: (this.stats.pokestopsVisited || 0) - getPrevValue('stop_visited'),
+      totalXp: (this.stats.totalXp || 0) - getPrevValue('total_xp'),
+    };
+    if (this.stats.stardust !== null && this.stats.stardust !== undefined && prevStardust !== null) {
+      diffs.stardust = (this.stats.stardust || 0) - prevStardust;
+    }
 
     if (
       diffs.level !== 0 ||
       diffs.distanceWalked !== 0 ||
       diffs.pokemonCaught !== 0 ||
       diffs.pokestopsVisited !== 0 ||
-      diffs.totalXp !== 0
+      diffs.totalXp !== 0 ||
+      (diffs.stardust !== undefined && diffs.stardust !== 0)
     ) {
       this.statDiffs = diffs;
 
       const now = this.screenshotDate ? this.screenshotDate.getTime() : Date.now();
-      const prevDate = new Date(this.previousStats.created_at).getTime();
+      const prevCreatedAt = this.previousStats?.created_at || (this.userHistory && this.userHistory.length > 0 ? this.userHistory.find((r: any) => r.id !== this.currentStatId)?.created_at : null);
+      const prevDate = prevCreatedAt ? new Date(prevCreatedAt).getTime() : now;
       this.diffDays = Math.max((now - prevDate) / (1000 * 60 * 60 * 24), 0);
 
       if (this.diffDays >= 1) {
@@ -538,6 +704,7 @@ export class HomeComponent implements OnInit, OnDestroy {
           pokemonCaught: diffs.pokemonCaught / this.diffDays,
           pokestopsVisited: diffs.pokestopsVisited / this.diffDays,
           totalXp: diffs.totalXp / this.diffDays,
+          stardust: diffs.stardust !== undefined ? diffs.stardust / this.diffDays : undefined,
         };
       } else {
         this.dailyAverages = null;
@@ -554,15 +721,43 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   startAnimations(): void {
-    if (!this.stats || !this.previousStats || !this.displayStats) return;
+    if (!this.stats || !this.displayStats) return;
 
-    // Initially snap display stats to previous DB stats (using Number() to prevent string concatenation bugs from MySQL decimals)
+    const getPrevNum = (field: string): number => {
+      if (this.previousStats && this.previousStats[field] != null) {
+        return Number(this.previousStats[field]) || 0;
+      }
+      if (this.userHistory && this.userHistory.length > 0) {
+        const pastRows = this.userHistory.filter((r: any) => r.id !== this.currentStatId);
+        const row = pastRows.find((r: any) => r[field] != null);
+        if (row) return Number(row[field]) || 0;
+      }
+      return 0;
+    };
+
+    let startStardust = getPrevNum('stardust');
+    if (startStardust === 0 && this.previousStats?.previousStardust != null) {
+      startStardust = Number(this.previousStats.previousStardust) || 0;
+    }
+
+    // Safe correction for leading-1 artifact on startStardust:
+    if (startStardust >= 10_000_000 && startStardust < 20_000_000 && this.stats?.stardust != null) {
+      const targetStardust = Number(this.stats.stardust) || 0;
+      const uncorrectedDiff = targetStardust - startStardust;
+      const correctedStart = startStardust - 10_000_000;
+      const correctedDiff = targetStardust - correctedStart;
+      if (uncorrectedDiff < -1_000_000 && correctedDiff >= -1_000_000 && correctedDiff <= 1_000_000) {
+        startStardust = correctedStart;
+      }
+    }
+
     const startObj = {
-      level: Number(this.previousStats.level) || 0,
-      distanceWalked: Number(this.previousStats.distance_walked) || 0,
-      pokemonCaught: Number(this.previousStats.caught) || 0,
-      pokestopsVisited: Number(this.previousStats.stop_visited) || 0,
-      totalXp: Number(this.previousStats.total_xp) || 0,
+      level: getPrevNum('level'),
+      distanceWalked: getPrevNum('distance_walked'),
+      pokemonCaught: getPrevNum('caught'),
+      pokestopsVisited: getPrevNum('stop_visited'),
+      totalXp: getPrevNum('total_xp'),
+      stardust: startStardust,
     };
 
     const targetObj = {
@@ -571,6 +766,7 @@ export class HomeComponent implements OnInit, OnDestroy {
       pokemonCaught: Number(this.stats.pokemonCaught) || 0,
       pokestopsVisited: Number(this.stats.pokestopsVisited) || 0,
       totalXp: Number(this.stats.totalXp) || 0,
+      stardust: Number(this.stats.stardust) || 0,
     };
 
     // Only apply starting values if the current parsed stat is not null (so we don't accidentally display '0' when missing)
@@ -579,20 +775,18 @@ export class HomeComponent implements OnInit, OnDestroy {
     if (this.stats.pokemonCaught !== null) this.displayStats.pokemonCaught = startObj.pokemonCaught;
     if (this.stats.pokestopsVisited !== null) this.displayStats.pokestopsVisited = startObj.pokestopsVisited;
     if (this.stats.totalXp !== null) this.displayStats.totalXp = startObj.totalXp;
+    if (this.stats.stardust !== null) this.displayStats.stardust = startObj.stardust;
 
-    const duration = 2000;
+    const duration = 1500;
 
-    // The image preview takes exactly 1000ms to fade out and collapse.
-    // Delay the animation start to sync perfectly with the image disappearing.
-    setTimeout(() => {
-      this.isAnimating = true;
-      const startTime = performance.now();
+    this.isAnimating = true;
+    const startTime = performance.now();
 
-      const easeOutQuad = (x: number): number => {
-        return 1 - (1 - x) * (1 - x);
-      };
+    const easeOutQuad = (x: number): number => {
+      return 1 - (1 - x) * (1 - x);
+    };
 
-      this.ngZone.runOutsideAngular(() => {
+    this.ngZone.runOutsideAngular(() => {
         const animate = (currentTime: number) => {
           const elapsed = currentTime - startTime;
           const progress = Math.min(elapsed / duration, 1);
@@ -604,6 +798,7 @@ export class HomeComponent implements OnInit, OnDestroy {
             if (this.stats?.pokemonCaught !== null) this.displayStats.pokemonCaught = Math.round(startObj.pokemonCaught + (targetObj.pokemonCaught - startObj.pokemonCaught) * easedProgress);
             if (this.stats?.pokestopsVisited !== null) this.displayStats.pokestopsVisited = Math.round(startObj.pokestopsVisited + (targetObj.pokestopsVisited - startObj.pokestopsVisited) * easedProgress);
             if (this.stats?.totalXp !== null) this.displayStats.totalXp = Math.round(startObj.totalXp + (targetObj.totalXp - startObj.totalXp) * easedProgress);
+            if (this.stats?.stardust !== null) this.displayStats.stardust = Math.round(startObj.stardust + (targetObj.stardust - startObj.stardust) * easedProgress);
             
             // Trigger local change detection for this component only, preventing global app lag
             this.cdr.detectChanges();
@@ -621,6 +816,7 @@ export class HomeComponent implements OnInit, OnDestroy {
                 if (this.stats.pokemonCaught !== null) this.displayStats.pokemonCaught = targetObj.pokemonCaught;
                 if (this.stats.pokestopsVisited !== null) this.displayStats.pokestopsVisited = targetObj.pokestopsVisited;
                 if (this.stats.totalXp !== null) this.displayStats.totalXp = targetObj.totalXp;
+                if (this.stats.stardust !== null) this.displayStats.stardust = targetObj.stardust;
               }
               this.cdr.detectChanges();
             });
@@ -629,7 +825,6 @@ export class HomeComponent implements OnInit, OnDestroy {
 
         requestAnimationFrame(animate);
       });
-    }, 900);
   }
 
 

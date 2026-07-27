@@ -72,7 +72,39 @@ describe('Stats Controller', () => {
       expect(res.status).toBe(403);
       expect(res.body.error).toMatch(/linked to an account/);
     });
+
+    // ── Bug 3 regression: uploadedAt should be forwarded to insertStat ────────
+    it('Bug 3: should pass uploadedAt from the request body through to insertStat', async () => {
+      userRepository.findByUsername.mockResolvedValue([]);
+      userRepository.findByGoogleId.mockResolvedValue([]);
+      statsRepository.hasStats.mockResolvedValue(false);
+      statsRepository.insertStat.mockResolvedValue(456);
+
+      const uploadedAt = new Date().toISOString();
+
+      const res = await request(app)
+        .post('/post-data')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          username: 'Trainer',
+          level: 40,
+          distanceWalked: 100,
+          caught: 5000,
+          stopVisited: 2000,
+          totalXp: 15000000,
+          uploadedAt
+        });
+
+      expect(res.status).toBe(200);
+      // The controller converts uploadedAt to a Date object before passing to insertStat
+      const callArgs = statsRepository.insertStat.mock.calls[0];
+      const hasUploadedAt = callArgs.some(
+        (arg) => arg instanceof Date && arg.toISOString() === uploadedAt
+      );
+      expect(hasUploadedAt).toBe(true);
+    });
   });
+
 
   describe('GET /get-data', () => {
     it('should return empty array if no user', async () => {

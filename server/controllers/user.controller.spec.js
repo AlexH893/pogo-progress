@@ -66,11 +66,47 @@ describe('User Controller', () => {
       const res = await request(app)
         .put('/user-preferences/Ash')
         .set('Authorization', `Bearer ${token}`)
-        .send({ defaultUnit: 'km', showFunFacts: false });
+        .send({ defaultUnit: 'km', showFunFacts: false, displayTutorial: true });
       
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(userRepository.updatePreferences).toHaveBeenCalledWith('Ash', 'km', false, true); // displayTutorial defaults to true if not explicitly false/undefined based on logic, wait the logic is `displayTutorial !== false`, so undefined !== false is true
+      // Bug #6 fix: explicit false/true values pass through correctly, not coerced
+      expect(userRepository.updatePreferences).toHaveBeenCalledWith('Ash', 'km', false, true);
+    });
+
+    // Regression: Bug #6 — sending null for showFunFacts previously evaluated
+    // as `null !== false` => true, making it impossible to disable the setting.
+    // We verify the key property: that neither argument is coerced to `true`.
+    it('should NOT coerce null/unset booleans to true (Bug #6 regression)', async () => {
+      userRepository.findByUsername.mockResolvedValue([{ google_id: testGoogleId }]);
+      userRepository.updatePreferences.mockResolvedValue(true);
+
+      const res = await request(app)
+        .put('/user-preferences/Ash')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ defaultUnit: 'km', showFunFacts: null, displayTutorial: null });
+
+      expect(res.status).toBe(200);
+      expect(userRepository.updatePreferences).toHaveBeenCalled();
+
+      const [, , actualShowFunFacts, actualDisplayTutorial] = userRepository.updatePreferences.mock.calls[0];
+      // Before the fix, both would have been coerced to `true` (null !== false => true).
+      // After the fix, they must NOT be true.
+      expect(actualShowFunFacts).not.toBe(true);
+      expect(actualDisplayTutorial).not.toBe(true);
+    });
+
+    it('should pass explicit true through for boolean preferences', async () => {
+      userRepository.findByUsername.mockResolvedValue([{ google_id: testGoogleId }]);
+      userRepository.updatePreferences.mockResolvedValue(true);
+
+      const res = await request(app)
+        .put('/user-preferences/Ash')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ defaultUnit: 'mi', showFunFacts: true, displayTutorial: false });
+
+      expect(res.status).toBe(200);
+      expect(userRepository.updatePreferences).toHaveBeenCalledWith('Ash', 'mi', true, false);
     });
   });
 

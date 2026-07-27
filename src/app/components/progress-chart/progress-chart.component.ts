@@ -12,28 +12,43 @@ export class ProgressChartComponent implements OnChanges {
 
   @ViewChild('progressChart') progressChartRef!: ElementRef<HTMLCanvasElement>;
   
-  selectedMetric: 'level' | 'distance_walked' | 'caught' | 'stop_visited' | 'total_xp' = 'total_xp';
+  selectedMetric: 'level' | 'distance_walked' | 'caught' | 'stop_visited' | 'total_xp' | 'stardust' = 'total_xp';
   chartInstance: Chart | null = null;
+
+  get isLevel80(): boolean {
+    return !!(this.userHistory && this.userHistory.some(row => row.level !== null && row.level !== undefined && row.level >= 80));
+  }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['userHistory'] && this.userHistory && this.userHistory.length > 0) {
+      if (this.isLevel80 && this.selectedMetric === 'level') {
+        this.selectedMetric = 'total_xp';
+      }
       setTimeout(() => this.updateChart(), 0);
     }
   }
 
-  setMetric(metric: 'level' | 'distance_walked' | 'caught' | 'stop_visited' | 'total_xp'): void {
+  setMetric(metric: 'level' | 'distance_walked' | 'caught' | 'stop_visited' | 'total_xp' | 'stardust'): void {
+    if (metric === 'level' && this.isLevel80) {
+      return;
+    }
     this.selectedMetric = metric;
     this.updateChart();
   }
 
   private updateChart(): void {
-    if (!this.progressChartRef || this.userHistory.length === 0) return;
+    if (!this.progressChartRef) return;
+    if (this.isLevel80 && this.selectedMetric === 'level') {
+      this.selectedMetric = 'total_xp';
+    }
+    const validHistory = this.userHistory.filter(row => row[this.selectedMetric] !== null && row[this.selectedMetric] !== undefined);
+    if (validHistory.length === 0) return;
 
     const ctx = this.progressChartRef.nativeElement.getContext('2d');
     if (!ctx) return;
 
-    const labels = this.userHistory.map(row => new Date(row.created_at).toLocaleDateString());
-    const data = this.userHistory.map(row => row[this.selectedMetric]);
+    const labels = validHistory.map(row => new Date(row.created_at).toLocaleDateString());
+    const data = validHistory.map(row => row[this.selectedMetric]);
 
     let labelText = '';
     let themeColor = '#FF5A00'; // Default Daylight Orange
@@ -43,6 +58,7 @@ export class ProgressChartComponent implements OnChanges {
       case 'caught': labelText = 'Pokémon Caught'; themeColor = '#FFC107'; break; // Yellow
       case 'stop_visited': labelText = 'Pokéstops Visited'; themeColor = '#1A1A1A'; break; // Charcoal
       case 'total_xp': labelText = 'Total XP'; themeColor = '#FF5A00'; break; // Orange
+      case 'stardust': labelText = 'Stardust'; themeColor = '#E040FB'; break; // Vibrant Magenta/Purple
     }
 
     const isLevel = this.selectedMetric === 'level';

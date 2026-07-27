@@ -57,11 +57,11 @@ function cleanUsername(candidate: string): string {
     username = 'Stillworld';
   }
   
-  if (username.length < 3) {
+  if (username.length < 3 || /^\d+$/.test(username)) {
     return '';
   }
   
-  if (/^(pokemon|pokmon|distance|total|level|activity|pokestops?|visited|caught|history|journal|me|buddy|any|play|liar|senet|een|nal|se)$/i.test(username)) {
+  if (/^(pokemon|pokmon|distance|total|level|activity|pokestops?|visited|caught|history|journal|me|buddy|any|play|liar|senet|een|nal|se|stardust|candy|height|weight|mega|energy|power|up|hp|cp|gyms|raids|trainer|battles)$/i.test(username)) {
     return '';
   }
 
@@ -69,6 +69,11 @@ function cleanUsername(candidate: string): string {
 }
 
 function parseUsername(text: string): string | null {
+  // Pokémon detail screens do not show the trainer username
+  if (isPokemonDetailScreen(text)) {
+    return null;
+  }
+
   const lines = text.split(/\r?\n/).map(line => line.trim());
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -149,7 +154,7 @@ function cleanDigitCandidate(raw: string): number | null {
 function parseLevelNearKeyword(text: string): number | null {
   const activityIndex = text.search(/total\s*activity/i);
   const headerText =
-    activityIndex >= 0 ? text.slice(0, activityIndex) : text.slice(0, 2500);
+    activityIndex > 0 ? text.slice(0, activityIndex) : text.slice(0, 2500);
 
   // Match "80" (or "80 >") on line above "LEVEL" (or OCR typos like "LEVE1", "LEVEI", "LEVL")
   const numberAboveLabel = headerText.match(
@@ -300,6 +305,9 @@ function parseDistance(
 }
 
 function parsePokemonCaught(text: string): number | null {
+  if (isPokemonDetailScreen(text)) {
+    return null;
+  }
   const patterns: RegExp[] = [
     /([\d,.]+)[ \t]+pok[eéè]?\s*mon\s*caught/i,
     /([\d,.]+)[ \t]+pok\w*\s*caught/i,
@@ -328,6 +336,9 @@ function parsePokemonCaught(text: string): number | null {
 }
 
 function parsePokestopsVisited(text: string): number | null {
+  if (isPokemonDetailScreen(text)) {
+    return null;
+  }
   const patterns: RegExp[] = [
     /([\d,.]+)[ \t]+pok[eéè]?s?tops?(?:\s*visited)?/i,
     /pok[eéè]?s?tops?(?:\s*visited)?[^0-9\n]*?([\d,.]+)/i,
@@ -357,6 +368,11 @@ function parseStructuralActivityCounts(text: string): {
   pokemonCaught: number | null;
   pokestopsVisited: number | null;
 } {
+  // Bypass structural fallback on Pokémon detail screens (prevents Candy/Candy XL from being read as Caught/Stops)
+  if (isPokemonDetailScreen(text)) {
+    return { pokemonCaught: null, pokestopsVisited: null };
+  }
+
   const counts = new Map<number, number>();
   const lines = text.split(/\r?\n/);
 
@@ -364,7 +380,7 @@ function parseStructuralActivityCounts(text: string): {
     if (
       isXpProgressLine(line) ||
       /\b(?:km|mi|miles?)\b/i.test(line) ||
-      /\b(?:date|start)\b/i.test(line)
+      /\b(?:date|start|xp|total)\b/i.test(line)
     ) {
       continue;
     }
@@ -471,7 +487,126 @@ function parseTotalXp(text: string): number | null {
 
   return parseTotalXpFromText(text, false);
 }
+export function isPokemonDetailScreen(text: string): boolean {
+  const upper = text.toUpperCase();
+
+  // Hard exclude: definitive profile-page markers
+  if (/TOTAL\s*ACT[I1]V[I1]TY|D[I1]STANCE\s*WALKED/.test(upper)) {
+    return false;
+  }
+
+  // Require at least 2 independent strong Pokémon-detail signals to avoid
+  // mis-classifying a profile screenshot that has a single noisy OCR word.
+  // "STARDUST" alone counts as 2 since it only appears on the Pokémon screen.
+  const strongSignals: RegExp[] = [
+    /\bSTARDUST\b/,            // Only on Pokémon inspect screen (worth 2)
+    /\bSTARDUST\b/,            // counted twice intentionally
+    /\bCANDY\b/,
+    /\bMEGA\b/,
+    /\bENERGY\b/,
+    /POWER\s*UP/,
+    /TRAINER\s*BATTLES/,
+    /\bGYMS\s*&\s*RAIDS\b/,
+    /\bRAIDU?\b.*\bCANDY\b/,  // "RAICHU CANDY"
+    /\d+\s*\/\s*\d+\s*HP/,    // "86/86 HP"
+    /\b(?:WEIGHT|HEIGHT)\b.*\b(?:WEIGHT|HEIGHT)\b/,  // Both on same screen
+  ];
+
+  const matchCount = strongSignals.filter(r => r.test(upper)).length;
+  return matchCount >= 2;
+}
+
+function parseStardust(text: string): number | null {
+  const isWeightOrHeight = (str: string): boolean => {
+    if (/\d+\.\d{1,2}\b/.test(str)) return true;
+    if (/\b\d+(?:\.\d+)?\s*(?:kg|g|lbs|m|cm|ft|in)\b/i.test(str)) return true;
+    return false;
+  };
+
+  const isInvalidCandidate = (str: string): boolean => {
+    if (str.includes(':')) return true; // Phone status bar clock times like 10:24 or 10:2449
+    if (isWeightOrHeight(str)) return true;
+    return false;
+  };
+
+  const cleanVal = (rawStr: string): number | null => {
+    if (isInvalidCandidate(rawStr)) return null;
+    let s = rawStr.trim();
+    // Strip leading icon artifact characters (e.g. "15,343,876" or "1 5,343,876" or "I5,343,876")
+    s = s.replace(/^[1Il|i§!]\s*(?=[1-9]\d{0,2}(?:,\d{3}){2,}\b)/, '');
+    // Strip unformatted leading icon digit on 8-digit numbers like "45163855" -> "5163855" or "15343876" -> "5343876"
+    s = s.replace(/^[1-9Il|i§!vA]\s*(?=[1-9]\d{6}\b)/, '');
+    const val = parseInteger(s);
+    if (!Number.isNaN(val) && val >= 10 && val < 100_000_000) {
+      return val;
+    }
+    return null;
+  };
+
+  // 1. Number above "STARDUST" label (on the exact line immediately preceding "STARDUST")
+  const numberAboveLabel = text.match(
+    /(?:^|\n)[^\S\r\n]*?([\d,. ]{1,15})[^\S\r\n]*\r?\n[^\S\r\n]*(?:stardust|star\s*dust|5tardust|siardust|sta\s*rdust)\b/im
+  );
+  if (numberAboveLabel) {
+    const val = cleanVal(numberAboveLabel[1]);
+    if (val !== null) {
+      return val;
+    }
+  }
+
+  // 2. Same line label then number: "STARDUST 5,163,855" or "STARDUST: 5,163,855"
+  const labelFirst = text.match(/(?:stardust|star\s*dust|5tardust|siardust|sta\s*rdust)\b[^\d\n]*?([\d,.]{1,12})/i);
+  if (labelFirst) {
+    const val = cleanVal(labelFirst[1]);
+    if (val !== null) {
+      return val;
+    }
+  }
+
+  // 3. Same line number then label: "5,163,855 STARDUST"
+  const numberFirst = text.match(/[^\d\n]*?([\d,.]{1,12})[^\n]*?\b(?:stardust|star\s*dust|5tardust|siardust|sta\s*rdust)\b/i);
+  if (numberFirst) {
+    const val = cleanVal(numberFirst[1]);
+    if (val !== null) {
+      return val;
+    }
+  }
+
+  // 4. Fallback for Pokémon Detail screen where OCR might misread or miss the STARDUST label text
+  if (isPokemonDetailScreen(text)) {
+    const lines = text.split(/\r?\n/);
+    const candidates: number[] = [];
+    for (const line of lines) {
+      if (/POWER\s*UP|EVOLVE|MEGA|WEIGHT|HEIGHT|\bHP\b|GYMS|RAIDS|BATTLES|LEVEL|ENERGY|\bkg\b|\blbs\b|\bm\b|\bcm\b/i.test(line) || line.includes(':')) {
+        continue;
+      }
+      const matches = line.match(/\b\d{1,3}(?:,\d{3})+\b|\b\d{4,9}\b/g);
+      if (matches) {
+        for (const m of matches) {
+          const val = cleanVal(m);
+          if (val !== null) {
+            candidates.push(val);
+          }
+        }
+      }
+    }
+    if (candidates.length > 0) {
+      const largeCandidates = candidates.filter(v => v >= 10_000);
+      if (largeCandidates.length > 0) {
+        return Math.max(...largeCandidates);
+      }
+      return candidates[0];
+    }
+  }
+
+  return null;
+}
+
 export function parseProfileStats(text: string): ProfileStats | null {
+  const isPokemonDetail = isPokemonDetailScreen(text);
+  const stardust = parseStardust(text);
+
+  // Always attempt to parse the full set of profile fields first.
   const structuralActivityCounts = parseStructuralActivityCounts(text);
   const totalXp = parseTotalXp(text);
   const level = parseLevel(text, totalXp);
@@ -480,18 +615,35 @@ export function parseProfileStats(text: string): ProfileStats | null {
   const pokestopsVisited = parsePokestopsVisited(text) ?? structuralActivityCounts.pokestopsVisited;
   const username = parseUsername(text);
 
-  if (
-    level === null &&
-    distance === null &&
-    pokemonCaught === null &&
-    pokestopsVisited === null &&
-    totalXp === null &&
-    username === null
-  ) {
+  const hasProfileFields =
+    level !== null ||
+    distance !== null ||
+    pokemonCaught !== null ||
+    pokestopsVisited !== null ||
+    totalXp !== null ||
+    username !== null;
+
+  // Only treat as a stardust-only / Pokémon-detail screenshot when no profile
+  // fields were found.  A full profile screenshot may also contain stardust.
+  if (!hasProfileFields && (stardust !== null || isPokemonDetail)) {
+    return {
+      level: null,
+      distanceWalked: null,
+      distanceUnit: null,
+      pokemonCaught: null,
+      pokestopsVisited: null,
+      totalXp: null,
+      stardust,
+      username: null,
+    };
+  }
+
+  if (!hasProfileFields) {
     return null;
   }
 
-  return {
+  // Full Trainer Profile screenshot — include stardust if it was also parsed.
+  const profileStats: ProfileStats = {
     level,
     distanceWalked: distance?.value ?? null,
     distanceUnit: distance?.unit ?? null,
@@ -500,4 +652,10 @@ export function parseProfileStats(text: string): ProfileStats | null {
     totalXp,
     username,
   };
+
+  if (stardust !== null) {
+    profileStats.stardust = stardust;
+  }
+
+  return profileStats;
 }

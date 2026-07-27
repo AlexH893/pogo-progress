@@ -13,7 +13,7 @@
     </app-upload>
 
     <app-diff-summary
-      *ngIf="state === 'success' && stats"
+      *ngIf="state === 'success' && stats && statDiffs"
       [statDiffs]="statDiffs"
       [dailyAverages]="dailyAverages"
       [editingFields]="editingFields">
@@ -63,7 +63,7 @@
       </div>
       
       <!-- Username mismatch warning banner -->
-      <div *ngIf="usernameMismatch" class="username-mismatch-banner" role="alert">
+      <div *ngIf="usernameMismatch && !isStardustOnlyUpload" class="username-mismatch-banner" role="alert">
         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
           <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
           <line x1="12" y1="9" x2="12" y2="13"></line>
@@ -76,13 +76,14 @@
       </div>
 
       <!-- Username/Level inline editors -->
-      <div *ngIf="editingFields.username" class="correction-box inline-correction">
+      <div *ngIf="editingFields.username && !isStardustOnlyUpload" class="correction-box inline-correction">
         <input #unameInput type="text" autofocus maxlength="17" [value]="stats.username" placeholder="Enter username" (keyup.enter)="submitCorrection('username', unameInput.value)" (blur)="submitCorrection('username', unameInput.value)" />
       </div>
 
 
       <dl class="stats__grid dashboard-stats-grid tabular-nums">
         <app-stat-card
+          *ngIf="!isStardustOnlyUpload"
           label="Level"
           [value]="stats.level"
           [displayValue]="displayStats?.level?.toString() || ''"
@@ -95,6 +96,7 @@
         </app-stat-card>
 
         <app-stat-card
+          *ngIf="!isStardustOnlyUpload"
           label="Total XP"
           [value]="stats.totalXp"
           [displayValue]="displayStats ? formatCount(displayStats.totalXp) : ''"
@@ -107,6 +109,7 @@
         </app-stat-card>
 
         <app-stat-card
+          *ngIf="!isStardustOnlyUpload"
           label="Distance"
           [value]="stats.distanceWalked"
           [displayValue]="displayStats ? formatDistance(displayStats) : ''"
@@ -120,6 +123,7 @@
         </app-stat-card>
 
         <app-stat-card
+          *ngIf="!isStardustOnlyUpload"
           label="Caught"
           [value]="stats.pokemonCaught"
           [displayValue]="displayStats ? formatCount(displayStats.pokemonCaught) : ''"
@@ -132,6 +136,7 @@
         </app-stat-card>
 
         <app-stat-card
+          *ngIf="!isStardustOnlyUpload"
           label="PokéStops"
           [value]="stats.pokestopsVisited"
           [displayValue]="displayStats ? formatCount(displayStats.pokestopsVisited) : ''"
@@ -142,16 +147,29 @@
           placeholder="Stops"
           (correctionSubmitted)="submitCorrection('pokestopsVisited', $event)">
         </app-stat-card>
+
+        <app-stat-card
+          *ngIf="isStardustOnlyUpload || (stats.stardust !== null && stats.stardust !== undefined)"
+          label="Stardust"
+          [value]="stats.stardust ?? null"
+          [displayValue]="displayStats ? formatCount(displayStats.stardust) : ''"
+          [diff]="statDiffs?.stardust"
+          [formattedDiff]="formatDiffCount(statDiffs?.stardust)"
+          [isAnimating]="isAnimating"
+          [(isEditing)]="editingFields.stardust"
+          placeholder="Stardust"
+          (correctionSubmitted)="submitCorrection('stardust', $event)">
+        </app-stat-card>
       </dl>
     </section>
 
     <app-fun-fact
-      *ngIf="state === 'success' && stats && funFact"
+      *ngIf="state === 'success' && stats && funFact && !isStardustOnlyUpload"
       [funFact]="funFact"
       (shuffleClicked)="shuffleFunFact()">
     </app-fun-fact>
 
-    @if (userHistory.length > 0 && username) {
+    @if (userHistory.length > 0 && username && !isStardustOnlyUpload) {
       @defer (on viewport) {
         <app-progress-chart
           [userHistory]="userHistory"

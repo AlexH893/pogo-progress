@@ -1,8 +1,7 @@
 <header class="home__header daylight-card" *ngIf="state !== 'success'">
   <h1>Activity Hub</h1>
   <p class="home__instructions">
-    Upload a <strong>trainer profile</strong> screenshot from Pokémon GO.
-    Open your profile, scroll to <strong>Total Activity</strong>, and screenshot the stats section. Uploaded screenshots are only processed client-side and aren't stored.
+    Upload a <strong>trainer profile</strong> or <strong>Pokémon detail</strong> screenshot from Pokémon GO to track your Level, XP, distance, catches, stops, and Stardust. Uploaded screenshots are only processed client-side.
   </p>
   <div class="action-buttons-row" style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 1.5rem; justify-content: center;">
     <button *ngIf="displayTutorial" type="button" class="btn-pill btn-pill--outline view-example-btn" (click)="openExampleModal()">
