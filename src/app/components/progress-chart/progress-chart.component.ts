@@ -15,19 +15,32 @@ export class ProgressChartComponent implements OnChanges {
   selectedMetric: 'level' | 'distance_walked' | 'caught' | 'stop_visited' | 'total_xp' | 'stardust' = 'total_xp';
   chartInstance: Chart | null = null;
 
+  get isLevel80(): boolean {
+    return !!(this.userHistory && this.userHistory.some(row => row.level !== null && row.level !== undefined && row.level >= 80));
+  }
+
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['userHistory'] && this.userHistory && this.userHistory.length > 0) {
+      if (this.isLevel80 && this.selectedMetric === 'level') {
+        this.selectedMetric = 'total_xp';
+      }
       setTimeout(() => this.updateChart(), 0);
     }
   }
 
   setMetric(metric: 'level' | 'distance_walked' | 'caught' | 'stop_visited' | 'total_xp' | 'stardust'): void {
+    if (metric === 'level' && this.isLevel80) {
+      return;
+    }
     this.selectedMetric = metric;
     this.updateChart();
   }
 
   private updateChart(): void {
     if (!this.progressChartRef) return;
+    if (this.isLevel80 && this.selectedMetric === 'level') {
+      this.selectedMetric = 'total_xp';
+    }
     const validHistory = this.userHistory.filter(row => row[this.selectedMetric] !== null && row[this.selectedMetric] !== undefined);
     if (validHistory.length === 0) return;
 
