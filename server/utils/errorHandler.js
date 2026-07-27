@@ -58,9 +58,8 @@ function parseError(err, defaultMessage = 'An unexpected database error occurred
     return dbMapped;
   }
 
-  // Handle custom thrown error messages if explicit
-  if (err.message && typeof err.message === 'string' && !err.message.includes('SQL') && !err.message.includes('at ')) {
-    return { message: err.message, code: 'ERR_SERVER_ERROR' };
+  if (err.userMessage && typeof err.userMessage === 'string') {
+    return { message: err.userMessage, code: err.errorCode || 'ERR_CUSTOM' };
   }
 
   return { message: defaultMessage, code: 'ERR_INTERNAL_SERVER' };
