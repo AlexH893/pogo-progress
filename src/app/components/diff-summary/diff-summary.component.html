@@ -24,6 +24,10 @@
       <span class="diff-name">Total XP</span>
       <span class="diff-value" [class.diff-positive]="statDiffs.totalXp > 0" [class.diff-negative]="statDiffs.totalXp < 0">{{ formatDiffCount(statDiffs.totalXp) }}</span>
     </div>
+    <div class="diff-item" *ngIf="statDiffs.stardust !== undefined && statDiffs.stardust !== 0">
+      <span class="diff-name">Stardust</span>
+      <span class="diff-value" [class.diff-positive]="statDiffs.stardust > 0" [class.diff-negative]="statDiffs.stardust < 0">{{ formatDiffCount(statDiffs.stardust) }}</span>
+    </div>
   </div>
 </section>
 
@@ -53,6 +57,10 @@
     <div class="diff-item" *ngIf="showPace('totalXp')">
       <span class="diff-name">XP / day</span>
       <span class="diff-value" [class.diff-positive]="dailyAverages.totalXp > 0" [class.diff-negative]="dailyAverages.totalXp < 0">{{ formatPaceCount(dailyAverages.totalXp) }}</span>
+    </div>
+    <div class="diff-item" *ngIf="showPace('stardust')">
+      <span class="diff-name">Stardust / day</span>
+      <span class="diff-value" [class.diff-positive]="dailyAverages.stardust > 0" [class.diff-negative]="dailyAverages.stardust < 0">{{ formatPaceCount(dailyAverages.stardust) }}</span>
     </div>
   </div>
 </section>

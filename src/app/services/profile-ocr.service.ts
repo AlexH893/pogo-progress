@@ -77,9 +77,20 @@ export class ProfileOcrService {
         throw new InvalidScreenshotError('It looks like your game might be in another language or the image is too blurry. Currently, only English profile and Pokémon detail screenshots are supported.', fullBinarizedText);
       }
 
-      const stardustStats = parseProfileStats(fullBinarizedText);
-      if (stardustStats && (stardustStats.stardust != null || isPokemonDetail)) {
-        return { stats: stardustStats, rawText: fullBinarizedText };
+      if (isPokemonDetail) {
+        const pass1RawResult = await this.recognize(worker, rawCanvas, PSM.SINGLE_BLOCK);
+        const pass1RawText = pass1RawResult.text;
+        const rawStats = parseProfileStats(pass1RawText);
+        const stardustStats = parseProfileStats(fullBinarizedText);
+        const mergedStardustStats = this.mergeStats(rawStats, stardustStats);
+        if (mergedStardustStats) {
+          return { stats: mergedStardustStats, rawText: [fullBinarizedText, pass1RawText].join('\n') };
+        }
+      } else {
+        const stardustStats = parseProfileStats(fullBinarizedText);
+        if (stardustStats && stardustStats.stardust != null) {
+          return { stats: stardustStats, rawText: fullBinarizedText };
+        }
       }
 
 
@@ -166,14 +177,28 @@ export class ProfileOcrService {
       distanceUnit: primary.distanceUnit ?? secondary.distanceUnit,
       pokemonCaught: primary.pokemonCaught ?? secondary.pokemonCaught,
       pokestopsVisited: primary.pokestopsVisited ?? secondary.pokestopsVisited,
-      totalXp: Math.max(primary.totalXp ?? 0, secondary.totalXp ?? 0) || null,
+      totalXp: primary.totalXp ?? secondary.totalXp,
       username: (primary.username && secondary.username)
         ? (primary.username.length >= secondary.username.length ? primary.username : secondary.username)
         : (primary.username ?? secondary.username),
     };
 
     if (primary.stardust !== undefined || secondary.stardust !== undefined) {
-      mergedStats.stardust = primary.stardust ?? secondary.stardust ?? null;
+      const pDust = primary.stardust;
+      const sDust = secondary.stardust;
+
+      if (pDust != null && sDust != null && pDust !== sDust) {
+        // Handle leading 1 icon artifact (e.g. 15,343,876 vs 5,343,876)
+        if (pDust >= 10_000_000 && pDust - 10_000_000 === sDust) {
+          mergedStats.stardust = sDust;
+        } else if (sDust >= 10_000_000 && sDust - 10_000_000 === pDust) {
+          mergedStats.stardust = pDust;
+        } else {
+          mergedStats.stardust = pDust ?? sDust;
+        }
+      } else {
+        mergedStats.stardust = pDust ?? sDust ?? null;
+      }
     }
 
     return mergedStats;

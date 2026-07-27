@@ -73,7 +73,7 @@
   font-variant-numeric: tabular-nums;
 
   &.diff-positive {
-    color: var(--color-primary); // Orange for gains
+    color: var(--color-success, #10b981);
   }
 
   &.diff-negative {

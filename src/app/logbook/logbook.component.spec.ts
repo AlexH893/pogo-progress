@@ -233,8 +233,8 @@ describe('LogbookComponent', () => {
       } as any;
 
       component.stats = [
-        { id: 1, created_at: new Date('2023-10-01T10:00:00Z').toISOString(), total_xp: 1000, distance_walked: 10, caught: 100, stop_visited: 50, level: 20 },
-        { id: 2, created_at: new Date('2023-10-05T10:00:00Z').toISOString(), total_xp: 5000, distance_walked: 50, caught: 500, stop_visited: 250, level: 25 }
+        { id: 1, created_at: new Date('2023-10-01T10:00:00Z').toISOString(), total_xp: 1000, distance_walked: 10, caught: 100, stop_visited: 50, level: 20, stardust: 50000 },
+        { id: 2, created_at: new Date('2023-10-05T10:00:00Z').toISOString(), total_xp: 5000, distance_walked: 50, caught: 500, stop_visited: 250, level: 25, stardust: 120000 }
       ];
 
       component.toggleSelection(1);
@@ -247,6 +247,7 @@ describe('LogbookComponent', () => {
       expect(component.comparisonResult.delta.caught).toBe(400);
       expect(component.comparisonResult.delta.stop_visited).toBe(200);
       expect(component.comparisonResult.delta.level).toBe(5);
+      expect(component.comparisonResult.delta.stardust).toBe(70000);
 
       expect(component.compareDialog.nativeElement.showModal).toHaveBeenCalled();
     });

@@ -11,7 +11,20 @@ exports.postData = async (req, res) => {
 
     const insertDate = createdAt ? new Date(createdAt) : new Date();
     const uploadedDate = uploadedAt ? new Date(uploadedAt) : null;
-    const previousStats = await statsRepository.getPreviousStats(username, insertDate);
+    let previousStats = await statsRepository.getPreviousStats(username, insertDate);
+    if (!previousStats && req.user) {
+      previousStats = await statsRepository.getPreviousStatsByGoogleId(req.user.googleId, insertDate);
+    }
+
+    if (previousStats && (previousStats.stardust === null || previousStats.stardust === undefined)) {
+      let prevStardustRow = await statsRepository.getPreviousStardust(username, insertDate);
+      if (!prevStardustRow && req.user) {
+        prevStardustRow = await statsRepository.getPreviousStardustByGoogleId(req.user.googleId, insertDate);
+      }
+      if (prevStardustRow) {
+        previousStats.previousStardust = prevStardustRow.stardust;
+      }
+    }
     
     // 1. Handle Users Table
     const userRows = await userRepository.findByUsername(username);

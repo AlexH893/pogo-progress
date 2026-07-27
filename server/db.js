@@ -6,47 +6,57 @@ const pool = mysql.createPool({
   timezone: 'Z'
 });
 
-// Wrap execute so every query runs in a UTC session.
-// TIMESTAMP columns (e.g. uploaded_at) are stored by the DB server using its
-// system timezone (MDT). Without forcing UTC here, mysql2 appends 'Z' to the
-// local time value, causing a 6-hour display offset in the browser.
-const _execute = pool.execute.bind(pool);
+// Wrap execute/query so the SET and the real query always share the SAME
+// pooled connection. The previous approach called the original method twice,
+// which could check out two different connections from the pool — the SET
+// would run on connection A and the query on connection B without UTC set.
 pool.execute = async function (sql, params) {
-  await _execute("SET time_zone = '+00:00'");
-  return _execute(sql, params);
+  const conn = await pool.getConnection();
+  try {
+    await conn.query("SET time_zone = '+00:00'");
+    return await conn.execute(sql, params);
+  } finally {
+    conn.release();
+  }
 };
 
-const _query = pool.query.bind(pool);
 pool.query = async function (sql, params) {
-  await _query("SET time_zone = '+00:00'");
-  return _query(sql, params);
+  const conn = await pool.getConnection();
+  try {
+    await conn.query("SET time_zone = '+00:00'");
+    return await conn.query(sql, params);
+  } finally {
+    conn.release();
+  }
 };
 
 // Auto-migration: ensure stardust column exists on stats table
-(async () => {
-  try {
-    const [rows] = await pool.query(
-      "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'stats' AND COLUMN_NAME = 'stardust'"
-    );
-    if (rows.length === 0) {
-      await pool.query("ALTER TABLE stats ADD COLUMN stardust BIGINT NULL AFTER total_xp");
-      console.log("Migration: Added 'stardust' column to 'stats' table.");
-    }
-    // Clean up existing Stardust entries where zeroes were saved instead of NULL.
-    // Guard with a COUNT first so we don't run a write on every boot once data is clean.
-    const [[{ dirtyCount }]] = await pool.query(
-      "SELECT COUNT(*) AS dirtyCount FROM stats WHERE stardust IS NOT NULL AND level IS NULL AND (caught = 0 OR distance_walked = 0 OR total_xp = 0)"
-    );
-    if (dirtyCount > 0) {
-      await pool.query(
-        "UPDATE stats SET distance_walked = NULL, caught = NULL, total_xp = NULL WHERE stardust IS NOT NULL AND level IS NULL AND (caught = 0 OR distance_walked = 0 OR total_xp = 0)"
+if (process.env.NODE_ENV !== 'test') {
+  (async () => {
+    try {
+      const [rows] = await pool.query(
+        "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'stats' AND COLUMN_NAME = 'stardust'"
       );
-      console.log(`Migration: Nullified zeroes on ${dirtyCount} stardust-only stat row(s).`);
+      if (rows.length === 0) {
+        await pool.query("ALTER TABLE stats ADD COLUMN stardust BIGINT NULL AFTER total_xp");
+        console.log("Migration: Added 'stardust' column to 'stats' table.");
+      }
+      // Clean up existing Stardust entries where zeroes were saved instead of NULL.
+      // Guard with a COUNT first so we don't run a write on every boot once data is clean.
+      const [[{ dirtyCount }]] = await pool.query(
+        "SELECT COUNT(*) AS dirtyCount FROM stats WHERE stardust IS NOT NULL AND level IS NULL AND (caught = 0 OR distance_walked = 0 OR total_xp = 0)"
+      );
+      if (dirtyCount > 0) {
+        await pool.query(
+          "UPDATE stats SET distance_walked = NULL, caught = NULL, total_xp = NULL WHERE stardust IS NOT NULL AND level IS NULL AND (caught = 0 OR distance_walked = 0 OR total_xp = 0)"
+        );
+        console.log(`Migration: Nullified zeroes on ${dirtyCount} stardust-only stat row(s).`);
+      }
+    } catch (err) {
+      // If schema query fails or column exists, ignore
+      console.warn("Migration check for stardust column:", err.message);
     }
-  } catch (err) {
-    // If schema query fails or column exists, ignore
-    console.warn("Migration check for stardust column:", err.message);
-  }
-})();
+  })();
+}
 
 module.exports = pool;

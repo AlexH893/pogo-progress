@@ -2,7 +2,30 @@ const db = require('../db');
 
 class StatsRepository {
   async getPreviousStats(username, date) {
-    const [rows] = await db.execute('SELECT * FROM stats WHERE username = ? AND created_at <= ? AND is_deleted = 0 ORDER BY created_at DESC LIMIT 1', [username, date]);
+    const [rows] = await db.execute('SELECT * FROM stats WHERE username = ? AND created_at < ? AND is_deleted = 0 ORDER BY created_at DESC LIMIT 1', [username, date]);
+    return rows.length > 0 ? rows[0] : null;
+  }
+
+  async getPreviousStardust(username, date) {
+    const [rows] = await db.execute('SELECT stardust, created_at FROM stats WHERE username = ? AND created_at < ? AND stardust IS NOT NULL AND is_deleted = 0 ORDER BY created_at DESC LIMIT 1', [username, date]);
+    return rows.length > 0 ? rows[0] : null;
+  }
+
+  async getPreviousStatsByGoogleId(googleId, date) {
+    const [userRows] = await db.execute('SELECT username FROM users WHERE google_id = ? AND is_deleted = 0', [googleId]);
+    if (userRows.length === 0) return null;
+    const usernames = userRows.map(u => u.username);
+    const placeholders = usernames.map(() => '?').join(',');
+    const [rows] = await db.execute(`SELECT * FROM stats WHERE username IN (${placeholders}) AND created_at < ? AND is_deleted = 0 ORDER BY created_at DESC LIMIT 1`, [...usernames, date]);
+    return rows.length > 0 ? rows[0] : null;
+  }
+
+  async getPreviousStardustByGoogleId(googleId, date) {
+    const [userRows] = await db.execute('SELECT username FROM users WHERE google_id = ? AND is_deleted = 0', [googleId]);
+    if (userRows.length === 0) return null;
+    const usernames = userRows.map(u => u.username);
+    const placeholders = usernames.map(() => '?').join(',');
+    const [rows] = await db.execute(`SELECT stardust, created_at FROM stats WHERE username IN (${placeholders}) AND created_at < ? AND stardust IS NOT NULL AND is_deleted = 0 ORDER BY created_at DESC LIMIT 1`, [...usernames, date]);
     return rows.length > 0 ? rows[0] : null;
   }
 
@@ -89,7 +112,7 @@ class StatsRepository {
   }
 
   async getStatsByUsername(username) {
-    const [rows] = await db.execute('SELECT id, username, level, distance_walked, caught, stop_visited, total_xp, stardust, entry_name, created_at FROM stats WHERE username = ? AND is_deleted = 0 ORDER BY created_at ASC', [username]);
+    const [rows] = await db.execute('SELECT id, username, level, distance_walked, caught, stop_visited, total_xp, stardust, entry_name, created_at, uploaded_at FROM stats WHERE username = ? AND is_deleted = 0 ORDER BY created_at ASC', [username]);
     return rows;
   }
 
@@ -100,7 +123,7 @@ class StatsRepository {
     const parsedLimit = parseInt(limit, 10) || 50;
     const parsedOffset = parseInt(offset, 10) || 0;
 
-    const [rows] = await db.execute(`SELECT id, username, level, distance_walked, caught, stop_visited, total_xp, stardust, entry_name, created_at FROM stats WHERE username = ? AND is_deleted = 0 ORDER BY ${actualSortField} ${actualSortDir} LIMIT ${parsedLimit} OFFSET ${parsedOffset}`, [username]);
+    const [rows] = await db.execute(`SELECT id, username, level, distance_walked, caught, stop_visited, total_xp, stardust, entry_name, created_at, uploaded_at FROM stats WHERE username = ? AND is_deleted = 0 ORDER BY ${actualSortField} ${actualSortDir} LIMIT ${parsedLimit} OFFSET ${parsedOffset}`, [username]);
     return rows;
   }
 

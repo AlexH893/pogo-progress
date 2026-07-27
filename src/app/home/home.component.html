@@ -13,7 +13,7 @@
     </app-upload>
 
     <app-diff-summary
-      *ngIf="state === 'success' && stats && !isStardustOnlyUpload"
+      *ngIf="state === 'success' && stats && statDiffs"
       [statDiffs]="statDiffs"
       [dailyAverages]="dailyAverages"
       [editingFields]="editingFields">

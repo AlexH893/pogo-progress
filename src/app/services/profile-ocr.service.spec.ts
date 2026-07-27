@@ -183,14 +183,40 @@ describe('ProfileOcrService', () => {
       expect(result.username).toBe('Stillworld');
     });
 
-    it('should pick the larger totalXp from either source', () => {
+    // ── Bug 5 regression: mergeStats totalXp should prefer primary, not Math.max ──
+    // Before the fix, Math.max(primary.totalXp ?? 0, secondary.totalXp ?? 0) could
+    // return a corrupted larger value from a noisier OCR pass over the correct primary.
+
+    it('Bug 5: should prefer primary totalXp when secondary is a larger but corrupted value', () => {
+      // Primary has a valid 50M XP from the careful first pass.
+      // Secondary has a corrupted 999M from a noisier second pass.
+      // Before the fix, Math.max would have incorrectly returned 999M.
+      const primary = {
+        level: 45, distanceWalked: 100, distanceUnit: 'km' as const,
+        pokemonCaught: 5000, pokestopsVisited: 2000,
+        totalXp: 50_000_000, username: 'Trainer',
+      };
+      const secondary = {
+        level: 45, distanceWalked: 100, distanceUnit: 'km' as const,
+        pokemonCaught: 5000, pokestopsVisited: 2000,
+        totalXp: 999_999_999, username: 'Trainer',
+      };
+      const result = mergeStats(primary, secondary);
+      expect(result.totalXp).toBe(50_000_000); // primary wins unconditionally
+    });
+
+
+
+    it('should use primary totalXp even when secondary has a larger value', () => {
+      // The old Math.max behavior would have returned the secondary value (352169022).
+      // With the ?? fix, primary always wins as long as it is not null.
       const primary = {
         level: 47,
         distanceWalked: 100,
         distanceUnit: 'km',
         pokemonCaught: 5000,
         pokestopsVisited: 2000,
-        totalXp: 164816022,          // XP bar value (smaller)
+        totalXp: 164816022,          // primary pass result (smaller, but correct)
         username: 'TestUser',
       };
       const secondary = {
@@ -199,12 +225,12 @@ describe('ProfileOcrService', () => {
         distanceUnit: 'km',
         pokemonCaught: 5000,
         pokestopsVisited: 2000,
-        totalXp: 352169022,          // Total Activity value (larger)
+        totalXp: 352169022,          // secondary pass result (larger, but treated as noise)
         username: 'TestUser',
       };
 
       const result = mergeStats(primary, secondary);
-      expect(result.totalXp).toBe(352169022);
+      expect(result.totalXp).toBe(164816022); // primary wins
     });
 
     it('should return null for totalXp when both sources have null totalXp', () => {
@@ -228,7 +254,6 @@ describe('ProfileOcrService', () => {
       };
 
       const result = mergeStats(primary, secondary);
-      // Math.max(0, 0) = 0, and then || null converts 0 to null
       expect(result.totalXp).toBeNull();
     });
 

@@ -243,6 +243,13 @@
         <div class="compare-cell delta-val" [class.positive]="comparisonResult.delta.stop_visited >= 0" [class.negative]="comparisonResult.delta.stop_visited < 0">{{ comparisonResult.delta.stop_visited >= 0 ? '+' : '' }}{{ comparisonResult.delta.stop_visited | number }} Stops</div>
       </ng-container>
 
+      <!-- Stardust -->
+      <ng-container *ngIf="comparisonResult.delta.stardust !== null">
+        <div class="compare-cell">{{ comparisonResult.older.stardust | number }}</div>
+        <div class="compare-cell">{{ comparisonResult.newer.stardust | number }}</div>
+        <div class="compare-cell delta-val" [class.positive]="comparisonResult.delta.stardust >= 0" [class.negative]="comparisonResult.delta.stardust < 0">{{ comparisonResult.delta.stardust >= 0 ? '+' : '' }}{{ comparisonResult.delta.stardust | number }} Stardust</div>
+      </ng-container>
+
     </div>
   </div>
   <div class="dialog-actions">
