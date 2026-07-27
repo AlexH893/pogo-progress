@@ -41,6 +41,15 @@ if (process.env.NODE_ENV !== 'test') {
         await pool.query("ALTER TABLE stats ADD COLUMN stardust BIGINT NULL AFTER total_xp");
         console.log("Migration: Added 'stardust' column to 'stats' table.");
       }
+
+      // Auto-migration: ensure stat metric columns allow NULL for stardust-only or partial uploads
+      const [notNullCols] = await pool.query(
+        "SELECT COLUMN_NAME, COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'stats' AND COLUMN_NAME IN ('level', 'distance_walked', 'caught', 'stop_visited', 'total_xp') AND IS_NULLABLE = 'NO'"
+      );
+      for (const col of notNullCols) {
+        await pool.query(`ALTER TABLE stats MODIFY COLUMN ${col.COLUMN_NAME} ${col.COLUMN_TYPE} NULL`);
+        console.log(`Migration: Made column '${col.COLUMN_NAME}' nullable in 'stats' table.`);
+      }
       // Clean up existing Stardust entries where zeroes were saved instead of NULL.
       // Guard with a COUNT first so we don't run a write on every boot once data is clean.
       const [[{ dirtyCount }]] = await pool.query(
