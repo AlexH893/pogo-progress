@@ -78,7 +78,7 @@ describe('StatsRepository', () => {
 
       expect(db.execute).toHaveBeenCalledWith(
         'INSERT INTO stats (username, level, distance_walked, caught, stop_visited, total_xp, stardust, entry_name, created_at, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        ['testuser', 40, 100, 500, 200, 1000, null, 'entry', '2023-01-01', jasmine.any(Date)]
+        ['testuser', 40, 100, 500, 200, 1000, null, 'entry', '2023-01-01', expect.any(Date)]
       );
       expect(result).toBe(42);
     });
