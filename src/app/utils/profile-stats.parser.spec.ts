@@ -618,4 +618,53 @@ Thunderbolt ©
     expect(result).toBeTruthy();
     expect(result?.stardust).toBe(5163855);
   });
+
+  it('parses Mewtwo stardust 4174260 from OCR pass with leading 0 icon artifact (04174260) [example_screenshots/mewtwo_4174260.jpg]', () => {
+    const text = `
+10/11
+192/192 HP
+92.71kg | (e] | 1.83m
+WEIGHT PSYCHIC HEIGHT
+04174260 © 2,534 J 874
+STARDUST MEWTWO MEWTWO
+CANDY CANDY XL
+QJ 18,550 Q) 7,416
+MEWTWO MEGA MEWTWO MEGA
+ENERGY X ENERGY Y
+    `;
+    const result = parseProfileStats(text);
+    expect(result).toBeTruthy();
+    expect(result?.stardust).toBe(4174260);
+  });
+
+  it('parses Mewtwo stardust 4174260 from OCR pass with leading 1 icon artifact and single comma (14,174260) [example_screenshots/mewtwo_4174260.jpg]', () => {
+    const text = `
+192 /192HP
+92.71kg 1.83m
+WEIGHT PSYCHIC HEIGHT
+14,174260 @ 2,534 & 874
+STARDUST MEWTWO MEWTWO
+CANDY CANDY XL
+J 18,550 7,416
+MEWTWO MEGA MEWTWO MEGA
+ENERGY X ENERGY Y
+    `;
+    const result = parseProfileStats(text);
+    expect(result).toBeTruthy();
+    expect(result?.stardust).toBe(4174260);
+  });
+
+  it('parses Mewtwo stardust 4174260 when space separates leading digit and icon artifact (4 174,260) [example_screenshots/mewtwo_4174260.jpg]', () => {
+    const text = `
+192 /192HP
+92.71kg 1.83m
+WEIGHT PSYCHIC HEIGHT
+4 174,260 @ 2,534 & 874
+STARDUST MEWTWO MEWTWO
+CANDY CANDY XL
+    `;
+    const result = parseProfileStats(text);
+    expect(result).toBeTruthy();
+    expect(result?.stardust).toBe(4174260);
+  });
 });

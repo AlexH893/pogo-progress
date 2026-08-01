@@ -10,7 +10,7 @@ function parseNumber(value: string): number {
 }
 
 function parseInteger(value: string): number {
-  return parseInt(value.replace(/[,.]/g, ''), 10);
+  return parseInt(value.replace(/[,.\s]/g, ''), 10);
 }
 
 function normalizeUnit(unit: string): DistanceUnit {
@@ -532,10 +532,14 @@ function parseStardust(text: string): number | null {
   const cleanVal = (rawStr: string): number | null => {
     if (isInvalidCandidate(rawStr)) return null;
     let s = rawStr.trim();
-    // Strip leading icon artifact characters (e.g. "15,343,876" or "1 5,343,876" or "I5,343,876")
-    s = s.replace(/^[1Il|i§!]\s*(?=[1-9]\d{0,2}(?:,\d{3}){2,}\b)/, '');
+    // Strip leading non-alphanumeric noise (symbols like '§', '!', '(', '[', '@', '©', etc.)
+    s = s.replace(/^[^0-9a-zA-Z]+/, '');
+    // Strip leading zeroes if followed by a non-zero digit (e.g. "04174260" -> "4174260", "04,174,260" -> "4,174,260")
+    s = s.replace(/^0+(?=[1-9])/, '');
+    // Strip leading icon artifact characters (e.g. "15,343,876", "14,174,260", "14,174260", "1 5,343,876", "I5,343,876")
+    s = s.replace(/^[1Il|i§!vAQD]\s*(?=[1-9]\d{0,2}(?:[,\s]?\d{3}){2,}\b)/, '');
     // Strip unformatted leading icon digit on 8-digit numbers like "45163855" -> "5163855" or "15343876" -> "5343876"
-    s = s.replace(/^[1-9Il|i§!vA]\s*(?=[1-9]\d{6}\b)/, '');
+    s = s.replace(/^[1-9Il|i§!vAQD]\s*(?=[1-9]\d{6}\b)/, '');
     const val = parseInteger(s);
     if (!Number.isNaN(val) && val >= 10 && val < 100_000_000) {
       return val;
@@ -544,31 +548,43 @@ function parseStardust(text: string): number | null {
   };
 
   // 1. Number above "STARDUST" label (on the exact line immediately preceding "STARDUST")
-  const numberAboveLabel = text.match(
-    /(?:^|\n)[^\S\r\n]*?([\d,. ]{1,15})[^\S\r\n]*\r?\n[^\S\r\n]*(?:stardust|star\s*dust|5tardust|siardust|sta\s*rdust)\b/im
+  const numberAboveLabelMatch = text.match(
+    /(?:^|\n)([^\n]+)\r?\n[^\S\r\n]*(?:stardust|star\s*dust|5tardust|siardust|sta\s*rdust)\b/im
   );
-  if (numberAboveLabel) {
-    const val = cleanVal(numberAboveLabel[1]);
-    if (val !== null) {
-      return val;
+  if (numberAboveLabelMatch) {
+    const lineAbove = numberAboveLabelMatch[1];
+    const numberMatches = lineAbove.match(/[0-9a-zA-Z§!|()\[\]@]*[\d,. ]{1,15}/g) || [];
+    for (const rawCandidate of numberMatches) {
+      const val = cleanVal(rawCandidate);
+      if (val !== null) {
+        return val;
+      }
     }
   }
 
   // 2. Same line label then number: "STARDUST 5,163,855" or "STARDUST: 5,163,855"
-  const labelFirst = text.match(/(?:stardust|star\s*dust|5tardust|siardust|sta\s*rdust)\b[^\d\n]*?([\d,.]{1,12})/i);
-  if (labelFirst) {
-    const val = cleanVal(labelFirst[1]);
-    if (val !== null) {
-      return val;
+  const labelFirstMatch = text.match(/(?:stardust|star\s*dust|5tardust|siardust|sta\s*rdust)\b[^\d\n]*?([^\n]+)/i);
+  if (labelFirstMatch) {
+    const restOfLine = labelFirstMatch[1];
+    const numberMatches = restOfLine.match(/[0-9a-zA-Z§!|()\[\]@]*[\d,. ]{1,15}/g) || [];
+    for (const rawCandidate of numberMatches) {
+      const val = cleanVal(rawCandidate);
+      if (val !== null) {
+        return val;
+      }
     }
   }
 
   // 3. Same line number then label: "5,163,855 STARDUST"
-  const numberFirst = text.match(/[^\d\n]*?([\d,.]{1,12})[^\n]*?\b(?:stardust|star\s*dust|5tardust|siardust|sta\s*rdust)\b/i);
-  if (numberFirst) {
-    const val = cleanVal(numberFirst[1]);
-    if (val !== null) {
-      return val;
+  const numberFirstMatch = text.match(/([^\n]+)\b(?:stardust|star\s*dust|5tardust|siardust|sta\s*rdust)\b/i);
+  if (numberFirstMatch) {
+    const lineBefore = numberFirstMatch[1];
+    const numberMatches = lineBefore.match(/[0-9a-zA-Z§!|()\[\]@]*[\d,. ]{1,15}/g) || [];
+    for (const rawCandidate of numberMatches) {
+      const val = cleanVal(rawCandidate);
+      if (val !== null) {
+        return val;
+      }
     }
   }
 
@@ -580,7 +596,7 @@ function parseStardust(text: string): number | null {
       if (/POWER\s*UP|EVOLVE|MEGA|WEIGHT|HEIGHT|\bHP\b|GYMS|RAIDS|BATTLES|LEVEL|ENERGY|\bkg\b|\blbs\b|\bm\b|\bcm\b/i.test(line) || line.includes(':')) {
         continue;
       }
-      const matches = line.match(/\b\d{1,3}(?:,\d{3})+\b|\b\d{4,9}\b/g);
+      const matches = line.match(/\b\d{1,3}(?:[,\s]\d{3})+\b|\b\d{4,9}\b/g);
       if (matches) {
         for (const m of matches) {
           const val = cleanVal(m);
